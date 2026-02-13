@@ -281,3 +281,21 @@ Use estas diretrizes para manter a ferramenta fácil de operar e consistente com
 ### Referência de comportamento
 
 - Quando houver dúvida sobre fluxo ou regra de negócio, consultar **SistemaReferencia.pa.yaml** (PowerApps) para alinhar ao comportamento do app antigo, adaptando para a paleta e padrões acima.
+
+---
+
+## Lições aprendidas – Exportação HTML e filtros
+
+### Filtros no HTML exportado
+
+- **Data-attributes** (`data-ata-id`, `data-ata-pai`, `data-ata-desc`, `data-ata-resp`, `data-ata-date`, `data-ata-status`, `data-ata-parent`) garantem filtragem robusta e independente da estrutura DOM.
+- **Itens-pai (organizadores)**: marcar com `data-ata-parent="1"`; **não aplicar** filtros de Responsável, Data, Status nem "Apenas Pendentes" – esses campos não se aplicam a organizadores.
+- **Hierarquia**: quando um item corresponde ao filtro, exibir **todos os ancestrais** (pai, avô, etc.) para dar contexto; usar `data-ata-pai` para percorrer a árvore.
+- **Parent só aparece por**: (a) filtro de descrição/item, ou (b) ter um descendente que corresponde ao filtro.
+
+### Impressão (Ctrl+P)
+
+- **Paginação**: dividir conteúdo em blocos (~35 itens por página) com `page-break-after: always`.
+- **Cabeçalho**: repetir em cada página com "Página X de N" correto.
+- **Quebras**: usar `page-break-inside: avoid` em `<tr>` e blocos para não quebrar no meio de itens.
+- **Barra de filtros**: ocultar na impressão (`@media print`).

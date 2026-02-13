@@ -2,24 +2,155 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xl);
+  max-width: 960px;
+  margin: 0 auto;
 }
 
 .section {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: 4px;
 }
 
 .sectionTitle {
   font-size: var(--font-size-lg);
+  font-weight: 600;
   color: var(--color-primary);
   margin: 0 0 var(--spacing-sm) 0;
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 2px solid var(--color-primary-light);
+}
+
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.sectionHeader .sectionTitle {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .cabecalhoGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-md);
+}
+
+.cabecalhoRow1 {
+  display: grid;
+  grid-template-columns: minmax(200px, 240px) 140px 1fr 1fr;
+  gap: var(--spacing-md);
+  align-items: end;
+}
+
+@media (max-width: 640px) {
+  .cabecalhoRow1 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.projetoWrap {
+  min-width: 0;
+}
+
+.projetoWrap > * {
+  width: 100%;
+}
+
+.tituloWrap {
+  grid-column: 1 / -1;
+}
+
+.tituloWrap {
+  margin-top: var(--spacing-xs);
+}
+
+.tituloTextarea {
+  min-height: 6em;
+  resize: vertical;
+}
+
+.inputWithDatalist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inputWithDatalist .label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.inputWithDatalist .input {
+  width: 100%;
+  padding: 10px 14px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  transition: border-color 0.2s;
+}
+
+.inputWithDatalist .input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 126, 122, 0.15);
+}
+
+.inputWithDatalist .input::placeholder {
+  color: var(--color-text-disabled);
+}
+
+/* Importar lista */
+.importActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.fileInput {
+  position: absolute;
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.importHint {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.importSuccess {
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-presenca-presente);
+  background: var(--color-presenca-presente-bg);
+  border-radius: 4px;
+}
+
+.importError {
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-presenca-ausente);
+  background: var(--color-presenca-ausente-bg);
+  border-radius: 4px;
 }
 
 .addParticipant {
@@ -33,14 +164,38 @@
   min-width: 120px;
 }
 
+.presencaSelect {
+  min-width: 120px;
+  padding: 10px 14px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.presencaSelect:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
 .participantList {
   overflow-x: auto;
 }
 
+.tableWrap {
+  border: 1px solid var(--color-border-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
 .empty {
   color: var(--color-text-secondary);
-  padding: var(--spacing-md);
+  padding: var(--spacing-lg);
   margin: 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
 }
 
 .table {
@@ -56,19 +211,28 @@
   border-bottom: 1px solid var(--color-border-light);
 }
 
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: rgba(0, 126, 122, 0.04);
+}
+
 .table th {
   background: var(--color-primary-light);
-  color: var(--color-primary-dark);
+  color: var(--color-primary-dark, #005f5c);
   font-weight: 600;
 }
 
 .presencaBadge {
   display: inline-block;
   padding: 4px 10px;
-  border-radius: var(--border-radius-sm);
-  font-weight: bold;
+  border-radius: 4px;
+  font-weight: 600;
   cursor: pointer;
   border: none;
+  font-size: var(--font-size-xs);
 }
 
 .presencaBadge.presente {
@@ -79,4 +243,72 @@
 .presencaBadge.ausente {
   background: var(--color-presenca-ausente-bg);
   color: var(--color-presenca-ausente);
+}
+
+.presencaBadge:hover {
+  opacity: 0.9;
+}
+
+/* Células editáveis Empresa / Telefone */
+.editableCell {
+  cursor: text;
+  min-width: 100px;
+}
+
+.cellValue {
+  display: block;
+  min-height: 1.5em;
+  color: var(--color-text);
+}
+
+.editableCell:hover .cellValue {
+  color: var(--color-primary);
+}
+
+.cellInput {
+  width: 100%;
+  min-width: 80px;
+  padding: 4px 8px;
+  font-family: var(--font-family);
+  font-size: inherit;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.cellInput:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 126, 122, 0.2);
+}
+
+.removeCell {
+  width: 44px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.removeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.removeBtn:hover {
+  background: var(--color-presenca-ausente-bg);
+  color: var(--color-presenca-ausente);
+}
+
+.removeIcon {
+  width: 18px;
+  height: 18px;
 }

@@ -1,0 +1,579 @@
+<script>
+      (function () {
+        if (typeof document === 'undefined' || typeof window === 'undefined')
+          return;
+
+        // --- 1. CRIAÇÃO DA BARRA DE FILTROS ---
+        let filterBar = document.createElement('div');
+        filterBar.id = 'ata-filter-bar';
+        filterBar.style.cssText =
+          'position:fixed;top:0;left:0;width:100%;background:#007e7a;color:white;padding:10px;z-index:9999;font-family:`Segoe UI`,Arial,sans-serif;box-shadow:0 2px 5px rgba(0,0,0,0.3);display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;font-size:14px;';
+
+        filterBar.innerHTML = `
+    <div style='font-weight:bold;'>🔍 Filtros:</div>
+    
+    <label style='display:flex;align-items:center;background:#005f5c;padding:5px 10px;border-radius:4px;cursor:pointer;' title='Oculta Concluídos, Cancelados e Informativos'>
+        <input type='checkbox' id='filter-open-only' style='margin-right:5px;cursor:pointer;'>
+        Apenas Pendentes
+    </label>
+
+    <input type='text' id='filter-desc' placeholder='Descrição ou Item...' style='padding:5px;border-radius:4px;border:none;width:180px;'>
+    <input type='text' id='filter-resp' placeholder='Responsável...' style='padding:5px;border-radius:4px;border:none;width:140px;'>
+    <input type='text' id='filter-data' placeholder='Data...' style='padding:5px;border-radius:4px;border:none;width:100px;'>
+    
+    <select id='filter-status' style='padding:5px;border-radius:4px;border:none;'>
+        <option value=''>Todos os Status</option>
+        <option value='Concluído'>Concluído</option>
+        <option value='Pendente'>Pendente</option>
+        <option value='Em andamento'>Em Andamento</option>
+        <option value='Cancelado'>Cancelado</option>
+        <option value='Info'>Info</option>
+    </select>
+    
+    <button id='btn-clear' style='padding:5px 10px;border-radius:4px;border:none;background:#ad2a23;color:white;cursor:pointer;font-weight:bold;'>Limpar</button>
+    <style>
+        @media print { #ata-filter-bar { display: none !important; } body { margin-top: 0 !important; } }
+    </style>
+`;
+
+        document.body.prepend(filterBar);
+        document.body.style.marginTop = '60px';
+
+        // letiável global para controlar cabeçalhos repetidos entre todas as tabelas
+        let firstHeaderShownGlobal = false;
+
+        // --- FUNÇÃO DE LIMPEZA DE TEXTO (CRUCIAL PARA O FILTRO FUNCIONAR) ---
+        function normalize(str) {
+          if (!str) return '';
+          // Remove emojis e outros símbolos Unicode antes da normalização
+          return str.trim().replace(/\s+/g, '').toLowerCase();
+        }
+
+        // --- 2. FUNÇÃO PRINCIPAL DE FILTRAGEM ---
+        function applyFilters() {
+          let txtDesc = normalize(document.getElementById('filter-desc').value);
+          let txtResp = normalize(document.getElementById('filter-resp').value);
+          let txtData = normalize(document.getElementById('filter-data').value);
+          // Status: normaliza da mesma forma que será feito na célula (remove caracteres especiais e normaliza espaços)
+          let txtStatus = normalize(document.getElementById('filter-status').value);
+          let onlyOpen = document.getElementById('filter-open-only').checked;
+
+          let isFiltered =
+            txtDesc !== '' ||
+            txtResp !== '' ||
+            txtData !== '' ||
+            txtStatus !== '' ||
+            onlyOpen;
+
+          // Reseta o controle global de cabeçalhos para cada nova filtragem
+          firstHeaderShownGlobal = false;
+
+          // Encontra a barra de filtros para excluir do processamento (declarado uma vez no início)
+          let filterBar = document.getElementById('ata-filter-bar');
+
+          // A. ENCONTRAR TABELAS PRINCIPAIS (DE TRÁS PARA FRENTE)
+          // Primeiro encontra todos os <th> com valor exato 'Item'
+          let itemHeaders = Array.from(document.querySelectorAll('th')).filter(
+            function (th) {
+              return th.textContent.trim() === 'Item';
+            }
+          );
+
+          // Para cada <th> encontrado, sobe na árvore DOM para encontrar a <table> pai
+          let mainTables = new Set();
+          itemHeaders.forEach(function (th) {
+            let element = th;
+            // Sobe na árvore DOM até encontrar uma <table>
+            while (element && element.tagName !== 'TABLE') {
+              element = element.parentElement;
+            }
+            if (element && element.tagName === 'TABLE') {
+              mainTables.add(element);
+            }
+          });
+
+          // Converte Set para Array para facilitar iteração
+          let mainTablesArray = Array.from(mainTables);
+
+          // B. LIMPEZA VISUAL
+          document.querySelectorAll('thead').forEach(function (el) {
+            el.style.display = isFiltered ? 'none' : '';
+          });
+
+          document.querySelectorAll('body > div').forEach(function (container) {
+            if (container.id === 'ata-filter-bar') return;
+            var mh = String(container.style.minHeight || '');
+            var w = String(container.style.width || '');
+            if (
+              mh.indexOf('100vh') >= 0 ||
+              mh === '100vh' ||
+              w.indexOf('calc') >= 0 ||
+              w === 'calc(100% - 2px)'
+            ) {
+              container.style.minHeight = isFiltered ? 'auto' : '100vh';
+              container.style.padding = isFiltered
+                ? '0px 10px'
+                : '12mm 8mm 15mm 8mm';
+              container.style.border = 'none';
+            }
+          });
+
+          // C. OCULTAR ELEMENTOS QUE NÃO ESTÃO NAS TABELAS PRINCIPAIS (DE BAIXO PARA CIMA)
+          if (isFiltered) {
+            // Função auxiliar para verificar se um elemento está dentro de alguma tabela principal
+            function isInsideMainTable(element) {
+              return mainTablesArray.some(function (mainTable) {
+                // Verifica se o elemento é a própria tabela principal ou está dentro dela
+                return mainTable === element || mainTable.contains(element);
+              });
+            }
+
+            // Função auxiliar para encontrar todas as tabelas que devem ser mostradas
+            // (tabelas principais e tabelas que contêm tabelas principais)
+            function shouldShowTable(table) {
+              // Ignora tabelas dentro da barra de filtros
+              if (filterBar && filterBar.contains(table)) {
+                return false;
+              }
+              
+              // Se é uma tabela principal, mostrar
+              if (mainTablesArray.indexOf(table) !== -1) {
+                return true;
+              }
+              
+              // Se contém alguma tabela principal, também mostrar
+              return mainTablesArray.some(function (mainTable) {
+                return table.contains(mainTable) && table !== mainTable;
+              });
+            }
+
+            // Processa todas as tabelas de baixo para cima
+            let allTables = Array.from(document.querySelectorAll('table'));
+            allTables.forEach(function (table) {
+              if (shouldShowTable(table)) {
+                table.style.display = '';
+              } else {
+                table.style.display = 'none';
+              }
+            });
+
+            // Oculta elementos (divs, etc.) que não estão dentro das tabelas principais
+            // Busca de baixo para cima: verifica se o elemento está dentro de alguma tabela principal
+            // EXCLUINDO a barra de filtros e seus elementos filhos
+            document.querySelectorAll('div').forEach(function (div) {
+              // Ignora elementos dentro da barra de filtros
+              if (filterBar && (filterBar === div || filterBar.contains(div))) {
+                return;
+              }
+              
+              if (!isInsideMainTable(div)) {
+                // Se não estiver dentro de uma tabela principal, oculta se for legenda ou outro elemento não essencial
+                if (div.innerText.indexOf('P = Presente') > -1) {
+                  div.style.display = 'none';
+                }
+              }
+            });
+
+            // Oculta outros elementos que não estão nas tabelas principais
+            // EXCLUINDO a barra de filtros e seus elementos filhos
+            document.querySelectorAll('p, h1, h2, h3, h4, h5, h6').forEach(function (element) {
+              // Ignora elementos dentro da barra de filtros
+              if (filterBar && filterBar.contains(element)) {
+                return;
+              }
+              
+              if (!isInsideMainTable(element)) {
+                element.style.display = 'none';
+              }
+            });
+          } else {
+            // Se não estiver filtrando, mostra tudo
+            // EXCLUINDO a barra de filtros e seus elementos filhos (mantém o estilo original)
+            document.querySelectorAll('table').forEach(function (table) {
+              // Ignora tabelas dentro da barra de filtros
+              if (filterBar && filterBar.contains(table)) {
+                return;
+              }
+              table.style.display = '';
+            });
+            document.querySelectorAll('div, p, h1, h2, h3, h4, h5, h6').forEach(function (element) {
+              // Ignora elementos dentro da barra de filtros
+              if (filterBar && (filterBar === element || filterBar.contains(element))) {
+                return;
+              }
+              element.style.display = '';
+            });
+          }
+
+          // D. FILTRAR LINHAS DAS TABELAS PRINCIPAIS (PRIMEIRO, PARA DEPOIS AJUSTAR LARGURAS)
+          mainTablesArray.forEach(function (table) {
+            filterItemRows(
+              table,
+              txtDesc,
+              txtResp,
+              txtData,
+              txtStatus,
+              onlyOpen,
+              isFiltered,
+            );
+          });
+
+          // E. AJUSTAR MARGIN-TOP DO DIV COM MARGIN-TOP 16px
+          if (isFiltered) {
+            // Encontra todos os divs e verifica se têm margin-top: 16px
+            // EXCLUINDO a barra de filtros e seus elementos filhos
+            document.querySelectorAll('div').forEach(function (div) {
+              // Ignora elementos dentro da barra de filtros
+              if (filterBar && (filterBar === div || filterBar.contains(div))) {
+                return;
+              }
+              
+              let style = window.getComputedStyle(div);
+              let marginTop = style.marginTop;
+              
+              // Verifica se margin-top é 16px
+              if (marginTop === '16px') {
+                div.style.marginTop = '0px';
+              } else {
+                // Verifica se está em um atributo style inline
+                let inlineStyle = div.getAttribute('style') || '';
+                // Procura por 'margin-top: 16px' ou 'margin: ... 16px ...' onde 16px é o primeiro valor (top)
+                if (inlineStyle.match(/margin-top:\s*16px/i)) {
+                  div.style.marginTop = '0px';
+                } else {
+                  // Verifica se está em margin shorthand: 'margin: 16px ...' (4 valores) ou 'margin: 16px ...' (2 valores verticais)
+                  let marginMatch = inlineStyle.match(/margin:\s*([^;]+)/i);
+                  if (marginMatch) {
+                    let marginValues = marginMatch[1].trim().split(/\s+/);
+                    // Se tem 4 valores (top right bottom left) e o primeiro é 16px
+                    if (marginValues.length === 4 && marginValues[0] === '16px') {
+                      div.style.margin = '0px ' + marginValues[1] + ' ' + marginValues[2] + ' ' + marginValues[3];
+                    } else if (marginValues.length === 2 && marginValues[0] === '16px') {
+                      // Se tem 2 valores (vertical horizontal) e o primeiro é 16px
+                      div.style.margin = '0px ' + marginValues[1];
+                    }
+                  }
+                }
+              }
+            });
+          } else {
+            // Quando não está filtrando, restaura os valores originais removendo estilos inline
+            // EXCLUINDO a barra de filtros e seus elementos filhos
+            document.querySelectorAll('div').forEach(function (div) {
+              // Ignora elementos dentro da barra de filtros
+              if (filterBar && (filterBar === div || filterBar.contains(div))) {
+                return;
+              }
+              
+              if (div.style.marginTop === '0px') {
+                div.style.marginTop = '';
+              }
+              // Restaura margin se foi alterado
+              let inlineStyle = div.getAttribute('style') || '';
+              if (inlineStyle.match(/margin:\s*0px/i)) {
+                div.style.margin = '';
+              }
+            });
+          }
+
+          // F. ALINHAR TODAS AS TABELAS COM O CABEÇALHO VISÍVEL (APÓS FILTRAGEM)
+          if (isFiltered) {
+            // Encontra o primeiro cabeçalho visível globalmente (o único que fica visível durante o filtro)
+            let visibleHeaderRow = null;
+            let visibleHeaderTable = null;
+            
+            // Busca por todos os <th> com valor 'Item' no documento e encontra o primeiro visível
+            // EXCLUINDO elementos dentro da barra de filtros
+            let allItemHeaders = Array.from(document.querySelectorAll('th')).filter(
+              function (th) {
+                // Ignora elementos dentro da barra de filtros
+                if (filterBar && filterBar.contains(th)) {
+                  return false;
+                }
+                return th.textContent.trim() === 'Item';
+              }
+            );
+
+            for (let i = 0; i < allItemHeaders.length; i++) {
+              let th = allItemHeaders[i];
+              // Sobe na árvore DOM até encontrar o <tr> pai
+              let element = th;
+              while (element && element.tagName !== 'TR') {
+                element = element.parentElement;
+              }
+              
+              if (element && element.tagName === 'TR') {
+                // Verifica se a linha está visível
+                let rowStyle = window.getComputedStyle(element);
+                let isVisible = element.style.display !== 'none' && 
+                               rowStyle.display !== 'none' &&
+                               rowStyle.visibility !== 'hidden';
+                
+                if (isVisible) {
+                  visibleHeaderRow = element;
+                  // Encontra a tabela pai
+                  let tableElement = element;
+                  while (tableElement && tableElement.tagName !== 'TABLE') {
+                    tableElement = tableElement.parentElement;
+                  }
+                  if (tableElement) {
+                    visibleHeaderTable = tableElement;
+                  }
+                  break; // Encontrou o primeiro cabeçalho visível, para a busca
+                }
+              }
+            }
+
+            // Se encontrou o cabeçalho visível, calcula as larguras percentuais
+            let globalColumnWidths = [];
+            
+            if (visibleHeaderRow) {
+              let headerCells = visibleHeaderRow.querySelectorAll('td, th');
+              let totalWidth = 0;
+              let cellWidths = [];
+
+              // Calcula a largura total do cabeçalho e armazena larguras individuais
+              headerCells.forEach(function (cell) {
+                let computedWidth = window.getComputedStyle(cell).width;
+                let widthValue = parseFloat(computedWidth);
+                
+                if (!isNaN(widthValue) && widthValue > 0) {
+                  cellWidths.push(widthValue);
+                  totalWidth += widthValue;
+                } else {
+                  // Se não conseguir obter largura válida, usa a largura da tabela dividida
+                  let tableWidth = parseFloat(window.getComputedStyle(visibleHeaderTable).width);
+                  if (!isNaN(tableWidth) && tableWidth > 0) {
+                    let estimatedWidth = tableWidth / headerCells.length;
+                    cellWidths.push(estimatedWidth);
+                    totalWidth += estimatedWidth;
+                  }
+                }
+              });
+
+              // Se conseguiu calcular larguras, converte para percentuais
+              if (totalWidth > 0 && cellWidths.length === headerCells.length) {
+                cellWidths.forEach(function (width) {
+                  let percent = (width / totalWidth) * 100;
+                  globalColumnWidths.push(percent.toFixed(2) + '%');
+                });
+              } else {
+                // Se não conseguiu, distribui igualmente
+                let numColumns = headerCells.length;
+                for (let i = 0; i < numColumns; i++) {
+                  globalColumnWidths.push((100 / numColumns).toFixed(2) + '%');
+                }
+              }
+            }
+
+            // Se não encontrou cabeçalho visível, tenta inferir do número de colunas das tabelas
+            if (globalColumnWidths.length === 0) {
+              // Encontra o número máximo de colunas entre todas as tabelas visíveis
+              // Considerando apenas tabelas principais (já filtradas por mainTablesArray)
+              let maxColumns = 0;
+              mainTablesArray.forEach(function (table) {
+                // Garante que a tabela não está dentro da barra de filtros
+                if (filterBar && filterBar.contains(table)) {
+                  return;
+                }
+                
+                let visibleRows = Array.from(table.querySelectorAll('tr')).filter(function (row) {
+                  return row.style.display !== 'none' && 
+                         window.getComputedStyle(row).display !== 'none';
+                });
+                visibleRows.forEach(function (row) {
+                  let cells = row.querySelectorAll('td, th');
+                  if (cells.length > maxColumns) {
+                    maxColumns = cells.length;
+                  }
+                });
+              });
+
+              if (maxColumns > 0) {
+                for (let i = 0; i < maxColumns; i++) {
+                  globalColumnWidths.push((100 / maxColumns).toFixed(2) + '%');
+                }
+              }
+            }
+
+            // Aplica as larguras globais a todas as tabelas principais
+            if (globalColumnWidths.length > 0) {
+              mainTablesArray.forEach(function (table) {
+                // Garante que a tabela não está dentro da barra de filtros
+                if (filterBar && filterBar.contains(table)) {
+                  return;
+                }
+                
+                // Encontra todas as linhas visíveis da tabela
+                let allVisibleRows = Array.from(table.querySelectorAll('tr')).filter(function (row) {
+                  return row.style.display !== 'none' && 
+                         window.getComputedStyle(row).display !== 'none';
+                });
+
+                // Aplica as larguras consistentes a todas as células
+                allVisibleRows.forEach(function (row) {
+                  let cells = row.querySelectorAll('td, th');
+                  cells.forEach(function (cell, index) {
+                    if (index < globalColumnWidths.length) {
+                      cell.style.width = globalColumnWidths[index];
+                      cell.style.minWidth = globalColumnWidths[index];
+                      cell.style.maxWidth = globalColumnWidths[index];
+                    }
+                  });
+                });
+              });
+            }
+          } else {
+            // Quando não está filtrando, remove as larguras fixas para restaurar comportamento original
+            mainTablesArray.forEach(function (table) {
+              // Garante que a tabela não está dentro da barra de filtros
+              if (filterBar && filterBar.contains(table)) {
+                return;
+              }
+              
+              table.querySelectorAll('td, th').forEach(function (cell) {
+                if (cell.style.width || cell.style.minWidth || cell.style.maxWidth) {
+                  cell.style.width = '';
+                  cell.style.minWidth = '';
+                  cell.style.maxWidth = '';
+                }
+              });
+            });
+          }
+        }
+
+        // --- 3. LÓGICA DE FILTRAGEM DE LINHAS ---
+        function filterItemRows(
+          table,
+          txtDesc,
+          txtResp,
+          txtData,
+          txtStatus,
+          onlyOpen,
+          isFiltered,
+        ) {
+          // BUSCA DE BAIXO PARA CIMA: Primeiro encontra todos os <th> com valor 'Item' dentro desta tabela
+          let headerRows = Array.from(table.querySelectorAll('th')).filter(
+            function (th) {
+              return th.textContent.trim() === 'Item';
+            }
+          ).map(function (th) {
+            // Para cada <th> encontrado, sobe na árvore DOM até encontrar o <tr> pai
+            let element = th;
+            while (element && element.tagName !== 'TR') {
+              element = element.parentElement;
+            }
+            return element;
+          }).filter(function (row) {
+            return row !== null;
+          });
+
+          // Busca todas as linhas de dados (linhas com <td>, não <th>)
+          let allRows = Array.from(table.querySelectorAll('tbody tr'));
+          let dataRows = allRows.filter(function (row) {
+            // Verifica se é uma linha de dados (tem <td> e não é linha de cabeçalho)
+            let firstCell = row.firstElementChild;
+            if (!firstCell) return false;
+            
+            // Se o primeiro filho for <th>, não é linha de dados
+            if (firstCell.tagName.toLowerCase() === 'th') {
+              return false;
+            }
+            
+            // Se o primeiro filho for <td>, é linha de dados
+            return firstCell.tagName.toLowerCase() === 'td';
+          });
+
+          // FILTRAGEM DAS LINHAS DE DADOS
+          dataRows.forEach(function (row) {
+            let cells = row.querySelectorAll('td');
+            let show = true;
+
+            // Item Normal (5 colunas)
+            if (cells.length >= 5) {
+              // Normaliza o conteúdo das células para comparação segura
+              let cDesc = normalize(
+                cells[1].innerText + ' ' + cells[0].innerText,
+              );
+              let cResp = normalize(cells[2].innerText);
+              let cData = normalize(cells[3].innerText);
+              // Status: extrai apenas letras, números e espaços (remove emojis e símbolos)
+              let cStatus = normalize(cells[4].innerText);
+
+              // Filtros de Texto
+              if (txtDesc && cDesc.indexOf(txtDesc) === -1) show = false;
+              if (txtResp && cResp.indexOf(txtResp) === -1) show = false;
+              if (txtData && cData.indexOf(txtData) === -1) show = false;
+              if (txtStatus && cStatus.indexOf(txtStatus) === -1) show = false;
+
+              // Filtro Checkbox 'Apenas Pendentes'
+              if (onlyOpen) {
+                // Oculta se for Concluído, Info ou Cancelado
+                if (
+                  cStatus.indexOf('concluído') > -1 ||
+                  cStatus.indexOf('concluido') > -1 ||
+                  cStatus.indexOf('info') > -1 ||
+                  cStatus.indexOf('cancelado') > -1
+                ) {
+                  show = false;
+                }
+              }
+
+              // Item Pai/Contexto (2 colunas)
+            } else if (cells.length === 2) {
+              let cDesc = normalize(
+                cells[1].innerText + ' ' + cells[0].innerText,
+              );
+              if (txtDesc && cDesc.indexOf(txtDesc) === -1) show = false;
+              // Se filtrar por status, oculta o pai
+              if (txtResp || txtStatus || txtData) show = false;
+            }
+
+            row.style.display = show ? '' : 'none';
+          });
+
+          // PROCESSAMENTO DOS CABEÇALHOS (de baixo para cima)
+          // Se estiver filtrando, mostra apenas o primeiro cabeçalho entre TODAS as tabelas
+          headerRows.forEach(function (row) {
+            if (isFiltered) {
+              if (!firstHeaderShownGlobal) {
+                row.style.display = ''; // Mostra o primeiro cabeçalho (primeira página)
+                firstHeaderShownGlobal = true;
+              } else {
+                row.style.display = 'none'; // Oculta cabeçalhos subsequentes (outras páginas)
+              }
+            } else {
+              row.style.display = ''; // Mostra todos os cabeçalhos quando não está filtrando
+            }
+          });
+        }
+
+        // --- 4. EVENT LISTENERS ---
+        document
+          .getElementById('filter-desc')
+          .addEventListener('keyup', applyFilters);
+        document
+          .getElementById('filter-resp')
+          .addEventListener('keyup', applyFilters);
+        document
+          .getElementById('filter-data')
+          .addEventListener('keyup', applyFilters);
+        document
+          .getElementById('filter-status')
+          .addEventListener('change', applyFilters);
+        document
+          .getElementById('filter-open-only')
+          .addEventListener('change', applyFilters);
+
+        document
+          .getElementById('btn-clear')
+          .addEventListener('click', function () {
+            document.getElementById('filter-desc').value = '';
+            document.getElementById('filter-resp').value = '';
+            document.getElementById('filter-data').value = '';
+            document.getElementById('filter-status').value = '';
+            document.getElementById('filter-open-only').checked = false;
+            applyFilters();
+          });
+      })();
+    </script>

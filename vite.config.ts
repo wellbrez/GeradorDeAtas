@@ -4,6 +4,7 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: '/GeradorDeAtas/', // obrigatório para GitHub Pages (repo: wellbrez/GeradorDeAtas)
   plugins: [react()],
   resolve: {
     alias: {

@@ -1,5 +1,6 @@
 import { Button } from '@components/ui'
 import type { MeetingMinutes } from '@/types'
+import { downloadAtaAsHtml, downloadAtaAsJson, printAtaAsPdf } from '../services/exportAta'
 import styles from './MeetingMinutesCard.module.css'
 
 export interface MeetingMinutesCardProps {
@@ -90,6 +91,41 @@ export default function MeetingMinutesCard({
         )}
         <Button variant="secondary" size="sm" onClick={() => onCopy(meetingMinutes.id)}>
           Copiar
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            downloadAtaAsHtml(meetingMinutes)
+            printAtaAsPdf(meetingMinutes)
+          }}
+          title="Baixar HTML e abrir impressão (Salvar como PDF)"
+        >
+          Exportar HTML e PDF
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => downloadAtaAsHtml(meetingMinutes)}
+          title="Baixar apenas HTML"
+        >
+          Exportar HTML
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => printAtaAsPdf(meetingMinutes)}
+          title="Abrir impressão (Salvar como PDF)"
+        >
+          Exportar PDF
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => downloadAtaAsJson(meetingMinutes)}
+          title="Baixar JSON da ata"
+        >
+          Exportar JSON
         </Button>
         {canDelete() && (
           <Button variant="danger" size="sm" onClick={() => onDelete(meetingMinutes.id)}>

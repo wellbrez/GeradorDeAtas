@@ -108,7 +108,9 @@ export default function MeetingMinutesForm({
             participants={form.attendance}
             onAddParticipant={form.addParticipant}
             onRemoveParticipant={form.removeParticipant}
+            onUpdateParticipant={form.updateParticipant}
             onTogglePresenca={form.togglePresenca}
+            onMarkAllAbsent={form.markAllAbsent}
             tiposAta={form.TIPOS_ATA}
           />
         )}

@@ -110,6 +110,16 @@ export function useAtaForm(ataExistente: MeetingMinutes | null, isCopy: boolean)
     )
   }, [])
 
+  const updateParticipant = useCallback((index: number, patch: Partial<Participant>) => {
+    setAttendance((prev) =>
+      prev.map((p, i) => (i === index ? { ...p, ...patch } : p))
+    )
+  }, [])
+
+  const markAllAbsent = useCallback(() => {
+    setAttendance((prev) => prev.map((p) => ({ ...p, presenca: 'A' as const })))
+  }, [])
+
   const addItemRaiz = useCallback(() => {
     const newId = 'item-' + generateId()
     const hist = createHistoricoVazio()
@@ -277,7 +287,9 @@ export function useAtaForm(ataExistente: MeetingMinutes | null, isCopy: boolean)
     updateCabecalho,
     addParticipant,
     removeParticipant,
+    updateParticipant,
     togglePresenca,
+    markAllAbsent,
     addItemRaiz,
     addSubItem,
     updateItemNumber,
