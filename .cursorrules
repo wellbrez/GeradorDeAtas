@@ -1,0 +1,283 @@
+# Regras de Desenvolvimento - Sistema de Atas de Reunião
+
+## Princípios Gerais
+
+1. **Type Safety First**: Sempre use TypeScript com tipos explícitos. Evite `any`.
+2. **Modularidade**: Mantenha código modular e reutilizável. Cada feature deve ser independente.
+3. **Separação de Responsabilidades**: Componentes para UI, Hooks para lógica de estado, Services para lógica de negócio.
+4. **Documentação**: Adicione comentários JSDoc para funções públicas e componentes principais.
+
+## Estrutura de Arquivos
+
+### Componentes
+- Use PascalCase para nomes de componentes (`MeetingMinutesList.tsx`)
+- Um componente por arquivo
+- Exporte o componente como default
+- Coloque types/interfaces no mesmo arquivo ou em `types.ts` da feature
+
+### Hooks
+- Prefixo `use` obrigatório (`useMeetingMinutes.ts`)
+- Um hook por arquivo
+- Documente parâmetros e retorno com JSDoc
+
+### Services
+- Use camelCase (`storageService.ts`)
+- Funções puras quando possível
+- Tratamento de erros explícito
+
+### Types
+- Interfaces para objetos (`interface MeetingMinutes`)
+- Types para unions/intersections (`type Status = 'Pendente' | 'Concluído'`)
+- Coloque types compartilhados em `/types`
+
+## Convenções de Código
+
+### TypeScript
+```typescript
+// ✅ BOM
+interface Participant {
+  nome: string;
+  email: string;
+}
+
+function addParticipant(participant: Participant): void {
+  // ...
+}
+
+// ❌ RUIM
+function addParticipant(participant: any) {
+  // ...
+}
+```
+
+### React Components
+```typescript
+// ✅ BOM
+interface ParticipantListProps {
+  participants: Participant[];
+  onRemove: (id: string) => void;
+}
+
+export default function ParticipantList({ 
+  participants, 
+  onRemove 
+}: ParticipantListProps) {
+  return (
+    // JSX
+  );
+}
+
+// ❌ RUIM
+export default function ParticipantList(props: any) {
+  // ...
+}
+```
+
+### Hooks
+```typescript
+// ✅ BOM
+/**
+ * Hook para gerenciar lista de participantes
+ * @param initialParticipants - Lista inicial de participantes
+ * @returns Objeto com participantes e funções de manipulação
+ */
+export function useParticipants(initialParticipants: Participant[] = []) {
+  const [participants, setParticipants] = useState<Participant[]>(initialParticipants);
+  
+  const addParticipant = useCallback((participant: Participant) => {
+    setParticipants(prev => [...prev, participant]);
+  }, []);
+  
+  return { participants, addParticipant };
+}
+```
+
+## Naming Conventions
+
+- **Variáveis/Funções**: camelCase (`getMeetingMinutes`)
+- **Constantes**: UPPER_SNAKE_CASE (`MAX_ITEMS_PER_PAGE`)
+- **Componentes**: PascalCase (`MeetingMinutesList`)
+- **Types/Interfaces**: PascalCase (`MeetingMinutes`)
+- **Arquivos de componente**: PascalCase (`MeetingMinutesList.tsx`)
+- **Arquivos de utilitários**: kebab-case (`format-date.ts`)
+
+## Estrutura de Pastas
+
+```
+src/
+├── components/          # Componentes reutilizáveis
+│   ├── ui/             # Componentes básicos
+│   └── layout/          # Layout components
+├── features/           # Features organizadas
+│   ├── atas/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── services/
+│   │   └── types.ts
+│   ├── participantes/
+│   └── itens/
+├── services/           # Serviços compartilhados
+├── hooks/              # Custom hooks compartilhados
+├── utils/              # Funções utilitárias
+├── types/              # Types globais
+└── styles/             # Estilos globais
+```
+
+## Regras Específicas do Projeto
+
+### Armazenamento Local
+- Use o serviço `storageService` para todas as operações de localStorage
+- Sempre trate erros de localStorage (quota excedida, etc)
+- Valide dados ao recuperar do localStorage
+
+### Geração de HTML
+- Separe a lógica de geração de HTML em serviço dedicado
+- Use templates/strings para construção de HTML
+- Mantenha estilos inline ou em seção `<style>` no HTML gerado
+- Implemente paginação automática baseada em altura estimada
+
+### Hierarquia de Itens
+- Numeração automática: "1", "1.1", "1.1.1"
+- Valide hierarquia ao criar/editar itens
+- Mantenha referências pai/filho consistentes
+
+### Rastreabilidade
+- Todas as ações devem gerar entrada no histórico
+- Inclua timestamp, responsável e descrição
+- Mantenha histórico imutável (não edite, apenas adicione)
+
+### Exportação
+- HTML deve ser auto-contido (sem dependências externas)
+- Inclua filtros interativos no HTML gerado
+- Suporte a impressão (CSS @media print)
+
+## Testes (quando implementados)
+
+- Teste funções utilitárias
+- Teste hooks com `@testing-library/react-hooks`
+- Teste componentes com `@testing-library/react`
+- Cobertura mínima: 70% para serviços críticos
+
+## Performance
+
+- Use `React.memo` para componentes pesados
+- Use `useMemo` e `useCallback` quando apropriado
+- Lazy load de componentes grandes
+- Debounce em inputs de busca/filtro
+
+## Acessibilidade
+
+- Use elementos semânticos HTML
+- Adicione `aria-label` em botões sem texto
+- Suporte navegação por teclado
+- Contraste adequado de cores
+
+## Tratamento de Erros
+
+- Sempre trate erros de forma explícita
+- Use try/catch em operações assíncronas
+- Forneça feedback ao usuário em caso de erro
+- Log erros para debug (console.error em dev)
+
+## Comentários e Documentação
+
+- JSDoc para funções públicas
+- Comentários explicativos para lógica complexa
+- README.md em cada feature principal
+- Documente decisões arquiteturais importantes
+
+## Git
+
+- Commits descritivos e atômicos
+- Branch por feature (`feature/nome-da-feature`)
+- PRs com descrição clara das mudanças
+- Não commite arquivos gerados ou dependências
+
+## Dependências
+
+- Prefira bibliotecas leves e bem mantidas
+- Evite dependências desnecessárias
+- Mantenha dependências atualizadas (security patches)
+- Documente dependências críticas no README
+
+## Estilos
+
+- Use CSS Modules para estilos scoped
+- CSS Variables para temas
+- Mobile-first quando aplicável
+- Consistência visual com design system básico
+
+## Validação
+
+- Valide inputs do usuário
+- Valide dados ao recuperar do storage
+- Mensagens de erro claras e úteis
+- Validação tanto no cliente quanto na lógica de negócio
+
+---
+
+## Lições aprendidas – UX e operação fluida
+
+Use estas diretrizes para manter a ferramenta fácil de operar e consistente com as decisões já tomadas.
+
+### Formulário e edição
+
+- **Formulário de ata em página cheia** (não modal): ocupa toda a tela para melhor uso do espaço; header com "Voltar", etapas e ações (Cancelar / Avançar / Salvar).
+- **Edição de item inline**: formulário de edição do item aparece **logo abaixo** do item, em layout **horizontal** (descrição, responsável, data, status, ações), para que outros itens continuem visíveis enquanto um é editado.
+- **Descrição**: campo maior, multi-linha, com **rich text** (negrito, itálico, sublinhado e cores da paleta Vale); exibir conteúdo com HTML **sanitizado** (`sanitizeHtml`); armazenar HTML no histórico.
+
+### Histórico de itens
+
+- **Criação**: novo item tem **um único** registro de histórico (vazio); a primeira edição **substitui** esse registro em vez de acrescentar outro.
+- **Por linha de histórico**: botão para **editar data de criação** (📅) e botão **excluir** (✕) ao lado do texto; **sempre** usar confirmação (`window.confirm`) antes de excluir histórico.
+- **Exclusão de histórico**: permitida apenas no **mesmo dia** ou **dia seguinte** à data de criação (`criadoEm`) do registro; e apenas se o item tiver **mais de um** histórico.
+
+### Arquivamento
+
+- Ao **copiar** uma ata, a ata **original** é marcada como **arquivada** (`setAtaArquivada`); a nova ata é criada normalmente.
+- Na lista: atas arquivadas exibem badge **"Arquivada"** e **não** mostram botão Editar (somente Copiar/Excluir conforme regras gerais).
+
+### Botões e ações (economia de espaço e clareza)
+
+- **Ações de item**: preferir **ícones com tooltip** (Editar ✏️, Adicionar subitem ➕, Excluir 🗑️) em vez de texto longo.
+- **Expandir/recolher subitens**: botão **à esquerda** do item (estilo Excel), **apenas ícone** (▶/▼), sem texto; célula fixa para alinhamento (vazio quando item não tem filhos).
+- **Recuo por nível**: usar **~10px por nível** de hierarquia para não consumir espaço em itens profundos (ex.: 1.1.1.1.1.1).
+
+### Responsável do item
+
+- **Seletor único**: dropdown **pesquisável** com os **integrantes da ata** (participantes da etapa 1); opção **"Adicionar novo integrante à ata"** que adiciona o participante e já o seleciona como responsável. Componente dedicado (`ResponsavelSelect`).
+
+### Status
+
+- **Seleção**: **chips coloridos** (um por status) em vez de `<select>`, usando **paleta Vale**; chip selecionado = fundo preenchido, não selecionado = borda + texto na cor.
+- **Badges na lista**: mesma paleta Vale por status (Pendente, Em Andamento, Concluído, Cancelado, Info), com fundo claro e borda.
+
+### Hierarquia visual (estilo Primavera P6 / Vale)
+
+- **Item sem filhos**: sempre **fundo branco** (em qualquer nível).
+- **Item com filhos**: fundo por **nível** – raiz (nível 1) mais marcado, níveis mais profundos mais claros; tons **claros da paleta Vale** (teal/aqua), alternados; borda esquerda na cor primária.
+- **Bordas**: preferir **pouco arredondamento** (ex.: 2px) para aspecto mais “sério”.
+
+### Pesquisa e filtros (etapa de itens)
+
+- **Pesquisa no topo**: campo de busca por **número do item** ou **texto da descrição** (remover HTML para busca com `stripHtml`).
+- **Filtro opcional**: checkbox para **ocultar** itens Concluídos, Cancelados e Info **que não foram editados no dia da reunião** (comparar `UltimoHistorico.criadoEm` com `cabecalho.data`).
+
+### Expansão de subitens
+
+- **Padrão**: subitens **expandidos por padrão** ao carregar (incluir todos os pais em `expandedIds` na primeira carga).
+- **Ao adicionar subitem**: **expandir automaticamente** o item-pai para o novo subitem aparecer de imediato (ex.: `handleAddSubItem` que chama `onAddSubItem` e adiciona o pai a `expandedIds`).
+
+### Exclusão de item
+
+- **Visibilidade**: botão Excluir **não aparece** se o item **tiver filhos** (subitens).
+- **Habilitado**: apenas se o item tiver **no máximo um** registro de histórico; caso contrário, orientar a excluir históricos antes (tooltip quando desabilitado).
+- **Confirmação**: **sempre** exibir mensagem clara e séria (ex.: "Tem certeza que deseja EXCLUIR este item? Esta ação não pode ser desfeita e excluirá também todos os subitens, se houver.") antes de executar a exclusão.
+
+### Paleta Vale (referência)
+
+- Usar para status, rich text e consistência visual: Verde-Vale `#007E7A`, Aqua-Vale `#0ABB98`, Azul-Vale `#3CB5E5`, Cinza-Escuro `#555555`, Amarelo-Vale `#ECB11F`, Laranja-Vale `#EE6F16`, Cereja-Vale `#C0305E`, Preto `#000000`, Branco `#FFFFFF`.
+
+### Referência de comportamento
+
+- Quando houver dúvida sobre fluxo ou regra de negócio, consultar **SistemaReferencia.pa.yaml** (PowerApps) para alinhar ao comportamento do app antigo, adaptando para a paleta e padrões acima.
