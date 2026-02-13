@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react'
 import styles from './Modal.module.css'
-import Button from './Button'
 
 export interface ModalProps {
   isOpen: boolean

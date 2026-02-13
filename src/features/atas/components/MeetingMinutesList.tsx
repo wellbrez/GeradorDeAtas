@@ -1,4 +1,3 @@
-import React from 'react'
 import { useMeetingMinutesList } from '../hooks/useMeetingMinutesList'
 import MeetingMinutesCard from './MeetingMinutesCard'
 import { Button } from '@components/ui'
@@ -7,6 +6,8 @@ import styles from './MeetingMinutesList.module.css'
 export interface MeetingMinutesListProps {
   onEdit: (id: string) => void
   onCreate: () => void
+  /** Se informado, Copiar abre o formulário em modo cópia; senão, copia imediatamente e atualiza a lista */
+  onCopy?: (id: string) => void
 }
 
 /**
@@ -15,6 +16,7 @@ export interface MeetingMinutesListProps {
 export default function MeetingMinutesList({
   onEdit,
   onCreate,
+  onCopy: onCopyProp,
 }: MeetingMinutesListProps) {
   const { atas, loading, error, remove, copy } = useMeetingMinutesList()
 
@@ -25,6 +27,10 @@ export default function MeetingMinutesList({
   }
 
   const handleCopy = async (id: string) => {
+    if (onCopyProp) {
+      onCopyProp(id)
+      return
+    }
     const copied = await copy(id)
     if (copied) {
       alert('Ata copiada com sucesso!')

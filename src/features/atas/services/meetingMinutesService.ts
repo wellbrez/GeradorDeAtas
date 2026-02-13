@@ -2,7 +2,7 @@
  * Serviço de gerenciamento de atas de reunião
  */
 import { storageService } from '@services/storage'
-import type { MeetingMinutes, MeetingMinutesStorage } from '@types'
+import type { MeetingMinutes, MeetingMinutesStorage, Item, Participant } from '@/types'
 
 /**
  * Gera um ID único para uma nova ata
@@ -110,12 +110,14 @@ export function updateMeetingMinutes(
       updatedAt: new Date().toISOString(),
     }
 
+    const existingData = existing as Record<string, unknown>
     storageService.saveMeetingMinutes(id, {
       cabecalho: storage.cabecalho,
       attendance: storage.attendance,
       itens: storage.itens,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
+      arquivada: existingData.arquivada,
     })
 
     return updated
@@ -139,7 +141,7 @@ export function deleteMeetingMinutes(id: string): boolean {
 }
 
 /**
- * Copia uma ata (cria nova baseada em existente)
+ * Copia uma ata (cria nova baseada em existente), preservando hierarquia de itens
  */
 export function copyMeetingMinutes(sourceId: string): MeetingMinutes | null {
   try {
@@ -148,28 +150,57 @@ export function copyMeetingMinutes(sourceId: string): MeetingMinutes | null {
       throw new Error(`Ata ${sourceId} não encontrada`)
     }
 
-    // Cria nova ata com dados copiados, mas com nova data
+    const oldToNewId: Record<string, string> = {}
+    source.itens.forEach((item: Item) => {
+      oldToNewId[item.id] = `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    })
+
+    const newItens = source.itens.map((item: Item) => {
+      const newId = oldToNewId[item.id]
+      const newHistId = `hist-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      const ultimo = item.UltimoHistorico
+      const novoUltimo = {
+        ...ultimo,
+        id: newHistId,
+        criadoEm: new Date().toISOString(),
+        responsavel: { ...ultimo.responsavel },
+      }
+      return {
+        ...item,
+        id: newId,
+        criadoEm: new Date().toISOString(),
+        filhos: (item.filhos || []).map((oldId: string) => oldToNewId[oldId] ?? oldId),
+        historico: [novoUltimo],
+        UltimoHistorico: novoUltimo,
+      }
+    })
+
     const newStorage: MeetingMinutesStorage = {
       cabecalho: {
         ...source.cabecalho,
-        numero: '', // Número deve ser definido pelo usuário
-        data: new Date().toISOString().split('T')[0], // Data atual
+        numero: '',
+        data: new Date().toISOString().split('T')[0],
       },
-      attendance: source.attendance.map((p) => ({ ...p })),
-      itens: source.itens.map((item) => ({
-        ...item,
-        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        criadoEm: new Date().toISOString(),
-        historico: item.historico.map((h) => ({
-          ...h,
-          id: `hist-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        })),
-      })),
+      attendance: source.attendance.map((p: Participant) => ({ ...p })),
+      itens: newItens,
     }
 
     return createMeetingMinutes(newStorage)
   } catch (error) {
     console.error(`Erro ao copiar ata ${sourceId}:`, error)
     throw error
+  }
+}
+
+/**
+ * Marca uma ata como arquivada (fixa). Usado quando a ata é copiada: a original fica arquivada.
+ */
+export function setAtaArquivada(id: string): void {
+  try {
+    const data = storageService.getMeetingMinutes(id) as Record<string, unknown> | null
+    if (!data) return
+    storageService.saveMeetingMinutes(id, { ...data, arquivada: true })
+  } catch (error) {
+    console.error(`Erro ao arquivar ata ${id}:`, error)
   }
 }

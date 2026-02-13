@@ -213,3 +213,71 @@ src/
 - Valide dados ao recuperar do storage
 - Mensagens de erro claras e úteis
 - Validação tanto no cliente quanto na lógica de negócio
+
+---
+
+## Lições aprendidas – UX e operação fluida
+
+Use estas diretrizes para manter a ferramenta fácil de operar e consistente com as decisões já tomadas.
+
+### Formulário e edição
+
+- **Formulário de ata em página cheia** (não modal): ocupa toda a tela para melhor uso do espaço; header com "Voltar", etapas e ações (Cancelar / Avançar / Salvar).
+- **Edição de item inline**: formulário de edição do item aparece **logo abaixo** do item, em layout **horizontal** (descrição, responsável, data, status, ações), para que outros itens continuem visíveis enquanto um é editado.
+- **Descrição**: campo maior, multi-linha, com **rich text** (negrito, itálico, sublinhado e cores da paleta Vale); exibir conteúdo com HTML **sanitizado** (`sanitizeHtml`); armazenar HTML no histórico.
+
+### Histórico de itens
+
+- **Criação**: novo item tem **um único** registro de histórico (vazio); a primeira edição **substitui** esse registro em vez de acrescentar outro.
+- **Por linha de histórico**: botão para **editar data de criação** (📅) e botão **excluir** (✕) ao lado do texto; **sempre** usar confirmação (`window.confirm`) antes de excluir histórico.
+- **Exclusão de histórico**: permitida apenas no **mesmo dia** ou **dia seguinte** à data de criação (`criadoEm`) do registro; e apenas se o item tiver **mais de um** histórico.
+
+### Arquivamento
+
+- Ao **copiar** uma ata, a ata **original** é marcada como **arquivada** (`setAtaArquivada`); a nova ata é criada normalmente.
+- Na lista: atas arquivadas exibem badge **"Arquivada"** e **não** mostram botão Editar (somente Copiar/Excluir conforme regras gerais).
+
+### Botões e ações (economia de espaço e clareza)
+
+- **Ações de item**: preferir **ícones com tooltip** (Editar ✏️, Adicionar subitem ➕, Excluir 🗑️) em vez de texto longo.
+- **Expandir/recolher subitens**: botão **à esquerda** do item (estilo Excel), **apenas ícone** (▶/▼), sem texto; célula fixa para alinhamento (vazio quando item não tem filhos).
+- **Recuo por nível**: usar **~10px por nível** de hierarquia para não consumir espaço em itens profundos (ex.: 1.1.1.1.1.1).
+
+### Responsável do item
+
+- **Seletor único**: dropdown **pesquisável** com os **integrantes da ata** (participantes da etapa 1); opção **"Adicionar novo integrante à ata"** que adiciona o participante e já o seleciona como responsável. Componente dedicado (`ResponsavelSelect`).
+
+### Status
+
+- **Seleção**: **chips coloridos** (um por status) em vez de `<select>`, usando **paleta Vale**; chip selecionado = fundo preenchido, não selecionado = borda + texto na cor.
+- **Badges na lista**: mesma paleta Vale por status (Pendente, Em Andamento, Concluído, Cancelado, Info), com fundo claro e borda.
+
+### Hierarquia visual (estilo Primavera P6 / Vale)
+
+- **Item sem filhos**: sempre **fundo branco** (em qualquer nível).
+- **Item com filhos**: fundo por **nível** – raiz (nível 1) mais marcado, níveis mais profundos mais claros; tons **claros da paleta Vale** (teal/aqua), alternados; borda esquerda na cor primária.
+- **Bordas**: preferir **pouco arredondamento** (ex.: 2px) para aspecto mais “sério”.
+
+### Pesquisa e filtros (etapa de itens)
+
+- **Pesquisa no topo**: campo de busca por **número do item** ou **texto da descrição** (remover HTML para busca com `stripHtml`).
+- **Filtro opcional**: checkbox para **ocultar** itens Concluídos, Cancelados e Info **que não foram editados no dia da reunião** (comparar `UltimoHistorico.criadoEm` com `cabecalho.data`).
+
+### Expansão de subitens
+
+- **Padrão**: subitens **expandidos por padrão** ao carregar (incluir todos os pais em `expandedIds` na primeira carga).
+- **Ao adicionar subitem**: **expandir automaticamente** o item-pai para o novo subitem aparecer de imediato (ex.: `handleAddSubItem` que chama `onAddSubItem` e adiciona o pai a `expandedIds`).
+
+### Exclusão de item
+
+- **Visibilidade**: botão Excluir **não aparece** se o item **tiver filhos** (subitens).
+- **Habilitado**: apenas se o item tiver **no máximo um** registro de histórico; caso contrário, orientar a excluir históricos antes (tooltip quando desabilitado).
+- **Confirmação**: **sempre** exibir mensagem clara e séria (ex.: "Tem certeza que deseja EXCLUIR este item? Esta ação não pode ser desfeita e excluirá também todos os subitens, se houver.") antes de executar a exclusão.
+
+### Paleta Vale (referência)
+
+- Usar para status, rich text e consistência visual: Verde-Vale `#007E7A`, Aqua-Vale `#0ABB98`, Azul-Vale `#3CB5E5`, Cinza-Escuro `#555555`, Amarelo-Vale `#ECB11F`, Laranja-Vale `#EE6F16`, Cereja-Vale `#C0305E`, Preto `#000000`, Branco `#FFFFFF`.
+
+### Referência de comportamento
+
+- Quando houver dúvida sobre fluxo ou regra de negócio, consultar **SistemaReferencia.pa.yaml** (PowerApps) para alinhar ao comportamento do app antigo, adaptando para a paleta e padrões acima.

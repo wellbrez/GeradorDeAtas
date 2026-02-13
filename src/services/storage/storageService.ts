@@ -101,21 +101,6 @@ function clear(): void {
 }
 
 /**
- * Obtém todas as chaves do storage do aplicativo
- */
-function getAllKeys(): string[] {
-  if (!isStorageAvailable()) {
-    return []
-  }
-
-  try {
-    return Object.keys(localStorage).filter(key => key.startsWith(STORAGE_KEY_PREFIX))
-  } catch {
-    return []
-  }
-}
-
-/**
  * Serviço de storage para atas de reunião
  */
 export const storageService = {

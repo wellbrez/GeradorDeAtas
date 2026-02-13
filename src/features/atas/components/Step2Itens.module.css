@@ -1,0 +1,427 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* Barra superior: pesquisa e filtros */
+.toolbarTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.searchWrap {
+  flex: 1;
+  min-width: 200px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  font-size: var(--font-size-sm);
+  background: var(--color-surface);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.filterLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.filterLabel input {
+  margin: 0;
+}
+
+.toolbar {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.empty {
+  color: var(--color-text-secondary);
+  padding: var(--spacing-md);
+  margin: 0;
+}
+
+/* Hierarquia: item SEM filhos = sempre branco; COM filhos = mais escuro no topo, mais claro ao descer (alternando tons Vale) */
+.itemRow {
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
+/* Item sem filhos (folha): fundo branco em qualquer nível */
+.itemRowSemFilhos {
+  background: #ffffff;
+  border-left: 3px solid var(--color-border);
+}
+
+/* Item com filhos: cor conforme nível (1 = mais marcado, 2 menos, etc.) – paleta Vale em tons claros alternados */
+.itemRowComFilhosNivel1 {
+  background: #dceceb;
+  border-left: 3px solid var(--color-primary);
+}
+
+.itemRowComFilhosNivel2 {
+  background: #e8f4f3;
+  border-left: 3px solid var(--color-primary);
+}
+
+.itemRowComFilhosNivel3 {
+  background: #e6f5f2;
+  border-left: 3px solid var(--color-primary);
+}
+
+.itemRowComFilhosNivel4 {
+  background: #f0f9f8;
+  border-left: 3px solid var(--color-primary);
+}
+
+.itemRowComFilhosNivel5 {
+  background: #f5fcfb;
+  border-left: 3px solid var(--color-primary);
+}
+
+.itemHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.itemNumero {
+  min-width: 56px;
+}
+
+.inputNumero {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.itemDescricao {
+  flex: 1;
+  min-width: 120px;
+  font-size: var(--font-size-sm);
+}
+
+.itemMeta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+/* Badges de status – paleta Vale */
+.statusBadge {
+  padding: 4px 10px;
+  border-radius: 2px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.status-Pendente {
+  background: rgba(236, 177, 31, 0.25);
+  color: #b8860b;
+  border-color: #ECB11F;
+}
+
+.status-EmAndamento {
+  background: rgba(238, 111, 22, 0.2);
+  color: #EE6F16;
+  border-color: #EE6F16;
+}
+
+.status-Concluído {
+  background: rgba(0, 126, 122, 0.2);
+  color: #007E7A;
+  border-color: #007E7A;
+}
+
+.status-Cancelado {
+  background: rgba(85, 85, 85, 0.15);
+  color: #555555;
+  border-color: #555555;
+}
+
+.status-Info {
+  background: rgba(60, 181, 229, 0.2);
+  color: #3CB5E5;
+  border-color: #3CB5E5;
+}
+
+/* Histórico anterior (entradas antigas) - cinza e itálico como no sistema de referência */
+.historicoAnterior {
+  color: var(--color-text-secondary);
+  font-style: italic;
+  font-size: var(--font-size-sm);
+}
+
+/* Ações por linha de histórico: editar data e excluir */
+.historicoActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.historicoBtnIcon,
+.historicoBtnIconDanger {
+  padding: 2px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  line-height: 1;
+}
+
+.historicoBtnIcon:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.historicoBtnIconDanger {
+  color: var(--color-danger, #c62828);
+  border-color: var(--color-danger, #c62828);
+}
+
+.historicoBtnIconDanger:hover {
+  background: #ffebee;
+}
+
+/* Linha de edição da data do histórico */
+.historicoEditRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-left: 4px;
+}
+
+.historicoDateInput {
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.historicoBtnOk,
+.historicoBtnCancel {
+  padding: 4px 10px;
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.historicoBtnOk {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.historicoBtnOk:hover,
+.historicoBtnCancel:hover {
+  opacity: 0.9;
+}
+
+.itemActions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.itemActionIcon,
+.itemActionIconPrimary,
+.itemActionIconDanger {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.itemActionIcon:hover:not(:disabled) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.itemActionIcon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.itemActionIconPrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.itemActionIconPrimary:hover {
+  background: var(--color-primary);
+  color: white;
+}
+
+.itemActionIconDanger:hover:not(:disabled) {
+  background: #ffebee;
+  border-color: #c62828;
+  color: #c62828;
+}
+
+.itemActionIconDanger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Célula à esquerda para ícone de expandir/recolher (estilo Excel) */
+.expandCell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  min-width: 18px;
+  flex-shrink: 0;
+}
+
+.toggleFilhos {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 1px;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  transition: background 0.12s, color 0.12s;
+}
+
+.toggleFilhos:hover {
+  background: rgba(0, 126, 122, 0.15);
+  color: var(--color-primary-dark, #005f5c);
+}
+
+/* Formulário de edição inline, horizontal, logo abaixo do item */
+.inlineEdit {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
+  border-radius: 2px;
+}
+
+.inlineEditRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.inlineEditRow label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: 2px;
+}
+
+.inlineEditDesc {
+  flex: 1 1 100%;
+  min-width: 200px;
+  width: 100%;
+}
+
+.inlineEditField {
+  min-width: 120px;
+}
+
+.inlineEditField input,
+.inlineEditField select {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+}
+
+/* Seletor de status: chips coloridos (paleta Vale, estilo app antigo) */
+.statusSelector {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.statusSelector label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.statusChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.statusChip {
+  padding: 6px 12px;
+  border: 2px solid var(--status-color, var(--color-border));
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--status-color, var(--color-text));
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.statusChip:hover {
+  background: var(--status-color);
+  color: #fff;
+}
+
+.statusChip[data-selected="true"] {
+  background: var(--status-color) !important;
+  color: #fff !important;
+}
+
+.inlineEditActions {
+  display: flex;
+  gap: var(--spacing-xs);
+}

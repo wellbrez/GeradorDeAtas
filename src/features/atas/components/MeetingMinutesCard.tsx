@@ -1,6 +1,5 @@
-import React from 'react'
 import { Button } from '@components/ui'
-import type { MeetingMinutes } from '@types'
+import type { MeetingMinutes } from '@/types'
 import styles from './MeetingMinutesCard.module.css'
 
 export interface MeetingMinutesCardProps {
@@ -29,6 +28,7 @@ export default function MeetingMinutesCard({
   }
 
   const canEdit = () => {
+    if (meetingMinutes.arquivada) return false
     try {
       const dataAta = new Date(meetingMinutes.cabecalho.data)
       const hoje = new Date()
@@ -57,6 +57,9 @@ export default function MeetingMinutesCard({
       <div className={styles.content}>
         <div className={styles.header}>
           <h3 className={styles.numero}>{meetingMinutes.cabecalho.numero}</h3>
+          {meetingMinutes.arquivada && (
+            <span className={styles.badgeArquivada}>Arquivada</span>
+          )}
           <span className={styles.meta}>
             {meetingMinutes.cabecalho.tipo} - {formatDate(meetingMinutes.cabecalho.data)}
           </span>

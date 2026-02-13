@@ -1,18 +1,48 @@
 import { useState } from 'react'
-import { MeetingMinutesList } from '@features/atas/components'
+import { MeetingMinutesList, MeetingMinutesForm } from '@features/atas/components'
+import { getMeetingMinutesById } from '@features/atas/services/meetingMinutesService'
+import type { MeetingMinutes } from '@/types'
 import styles from './App.module.css'
 
 function App() {
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [formAta, setFormAta] = useState<MeetingMinutes | null>(null)
+  const [formIsCopy, setFormIsCopy] = useState(false)
+  const [listKey, setListKey] = useState(0)
 
   const handleCreate = () => {
-    // TODO: Abrir modal de criação
-    alert('Funcionalidade de criação será implementada em breve')
+    setFormAta(null)
+    setFormIsCopy(false)
+    setFormOpen(true)
   }
 
   const handleEdit = (id: string) => {
-    // TODO: Abrir modal de edição
-    alert(`Funcionalidade de edição será implementada em breve (ID: ${id})`)
+    const ata = getMeetingMinutesById(id)
+    setFormAta(ata ?? null)
+    setFormIsCopy(false)
+    setFormOpen(true)
+  }
+
+  const handleCopy = async (id: string) => {
+    const ata = getMeetingMinutesById(id)
+    setFormAta(ata ?? null)
+    setFormIsCopy(true)
+    setFormOpen(true)
+  }
+
+  const handleFormSaved = () => {
+    setListKey((k) => k + 1)
+  }
+
+  if (formOpen) {
+    return (
+      <MeetingMinutesForm
+        onClose={() => setFormOpen(false)}
+        existingAta={formAta}
+        isCopy={formIsCopy}
+        onSaved={handleFormSaved}
+      />
+    )
   }
 
   return (
@@ -28,7 +58,12 @@ function App() {
 
       <main className={styles.main}>
         <div className={styles.container}>
-          <MeetingMinutesList onCreate={handleCreate} onEdit={handleEdit} />
+          <MeetingMinutesList
+            key={listKey}
+            onCreate={handleCreate}
+            onEdit={handleEdit}
+            onCopy={handleCopy}
+          />
         </div>
       </main>
     </div>

@@ -3,7 +3,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { getAllMeetingMinutes, deleteMeetingMinutes, copyMeetingMinutes } from '../services/meetingMinutesService'
-import type { MeetingMinutes } from '@types'
+import type { MeetingMinutes } from '@/types'
 
 export function useMeetingMinutesList() {
   const [atas, setAtas] = useState<MeetingMinutes[]>([])

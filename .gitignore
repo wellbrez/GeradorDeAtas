@@ -35,3 +35,7 @@ out
 # Temporary files
 *.tmp
 *.temp
+
+# Markdown: apenas README.md é versionado
+*.md
+!README.md

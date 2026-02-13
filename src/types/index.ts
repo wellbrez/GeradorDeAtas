@@ -79,6 +79,8 @@ export interface MeetingMinutes {
   itens: Item[]
   createdAt: string // ISO date string
   updatedAt: string // ISO date string
+  /** Quando true, a ata foi origem de uma cópia e fica fixa (somente leitura) */
+  arquivada?: boolean
 }
 
 /**

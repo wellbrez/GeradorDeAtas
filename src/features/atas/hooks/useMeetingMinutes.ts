@@ -7,7 +7,7 @@ import {
   updateMeetingMinutes,
   deleteMeetingMinutes,
 } from '../services/meetingMinutesService'
-import type { MeetingMinutes, MeetingMinutesStorage } from '@types'
+import type { MeetingMinutes, MeetingMinutesStorage } from '@/types'
 
 export function useMeetingMinutes(id: string | null) {
   const [meetingMinutes, setMeetingMinutes] = useState<MeetingMinutes | null>(null)
