@@ -1,0 +1,215 @@
+# Regras de Desenvolvimento - Sistema de Atas de Reunião
+
+## Princípios Gerais
+
+1. **Type Safety First**: Sempre use TypeScript com tipos explícitos. Evite `any`.
+2. **Modularidade**: Mantenha código modular e reutilizável. Cada feature deve ser independente.
+3. **Separação de Responsabilidades**: Componentes para UI, Hooks para lógica de estado, Services para lógica de negócio.
+4. **Documentação**: Adicione comentários JSDoc para funções públicas e componentes principais.
+
+## Estrutura de Arquivos
+
+### Componentes
+- Use PascalCase para nomes de componentes (`MeetingMinutesList.tsx`)
+- Um componente por arquivo
+- Exporte o componente como default
+- Coloque types/interfaces no mesmo arquivo ou em `types.ts` da feature
+
+### Hooks
+- Prefixo `use` obrigatório (`useMeetingMinutes.ts`)
+- Um hook por arquivo
+- Documente parâmetros e retorno com JSDoc
+
+### Services
+- Use camelCase (`storageService.ts`)
+- Funções puras quando possível
+- Tratamento de erros explícito
+
+### Types
+- Interfaces para objetos (`interface MeetingMinutes`)
+- Types para unions/intersections (`type Status = 'Pendente' | 'Concluído'`)
+- Coloque types compartilhados em `/types`
+
+## Convenções de Código
+
+### TypeScript
+```typescript
+// ✅ BOM
+interface Participant {
+  nome: string;
+  email: string;
+}
+
+function addParticipant(participant: Participant): void {
+  // ...
+}
+
+// ❌ RUIM
+function addParticipant(participant: any) {
+  // ...
+}
+```
+
+### React Components
+```typescript
+// ✅ BOM
+interface ParticipantListProps {
+  participants: Participant[];
+  onRemove: (id: string) => void;
+}
+
+export default function ParticipantList({ 
+  participants, 
+  onRemove 
+}: ParticipantListProps) {
+  return (
+    // JSX
+  );
+}
+
+// ❌ RUIM
+export default function ParticipantList(props: any) {
+  // ...
+}
+```
+
+### Hooks
+```typescript
+// ✅ BOM
+/**
+ * Hook para gerenciar lista de participantes
+ * @param initialParticipants - Lista inicial de participantes
+ * @returns Objeto com participantes e funções de manipulação
+ */
+export function useParticipants(initialParticipants: Participant[] = []) {
+  const [participants, setParticipants] = useState<Participant[]>(initialParticipants);
+  
+  const addParticipant = useCallback((participant: Participant) => {
+    setParticipants(prev => [...prev, participant]);
+  }, []);
+  
+  return { participants, addParticipant };
+}
+```
+
+## Naming Conventions
+
+- **Variáveis/Funções**: camelCase (`getMeetingMinutes`)
+- **Constantes**: UPPER_SNAKE_CASE (`MAX_ITEMS_PER_PAGE`)
+- **Componentes**: PascalCase (`MeetingMinutesList`)
+- **Types/Interfaces**: PascalCase (`MeetingMinutes`)
+- **Arquivos de componente**: PascalCase (`MeetingMinutesList.tsx`)
+- **Arquivos de utilitários**: kebab-case (`format-date.ts`)
+
+## Estrutura de Pastas
+
+```
+src/
+├── components/          # Componentes reutilizáveis
+│   ├── ui/             # Componentes básicos
+│   └── layout/          # Layout components
+├── features/           # Features organizadas
+│   ├── atas/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── services/
+│   │   └── types.ts
+│   ├── participantes/
+│   └── itens/
+├── services/           # Serviços compartilhados
+├── hooks/              # Custom hooks compartilhados
+├── utils/              # Funções utilitárias
+├── types/              # Types globais
+└── styles/             # Estilos globais
+```
+
+## Regras Específicas do Projeto
+
+### Armazenamento Local
+- Use o serviço `storageService` para todas as operações de localStorage
+- Sempre trate erros de localStorage (quota excedida, etc)
+- Valide dados ao recuperar do localStorage
+
+### Geração de HTML
+- Separe a lógica de geração de HTML em serviço dedicado
+- Use templates/strings para construção de HTML
+- Mantenha estilos inline ou em seção `<style>` no HTML gerado
+- Implemente paginação automática baseada em altura estimada
+
+### Hierarquia de Itens
+- Numeração automática: "1", "1.1", "1.1.1"
+- Valide hierarquia ao criar/editar itens
+- Mantenha referências pai/filho consistentes
+
+### Rastreabilidade
+- Todas as ações devem gerar entrada no histórico
+- Inclua timestamp, responsável e descrição
+- Mantenha histórico imutável (não edite, apenas adicione)
+
+### Exportação
+- HTML deve ser auto-contido (sem dependências externas)
+- Inclua filtros interativos no HTML gerado
+- Suporte a impressão (CSS @media print)
+
+## Testes (quando implementados)
+
+- Teste funções utilitárias
+- Teste hooks com `@testing-library/react-hooks`
+- Teste componentes com `@testing-library/react`
+- Cobertura mínima: 70% para serviços críticos
+
+## Performance
+
+- Use `React.memo` para componentes pesados
+- Use `useMemo` e `useCallback` quando apropriado
+- Lazy load de componentes grandes
+- Debounce em inputs de busca/filtro
+
+## Acessibilidade
+
+- Use elementos semânticos HTML
+- Adicione `aria-label` em botões sem texto
+- Suporte navegação por teclado
+- Contraste adequado de cores
+
+## Tratamento de Erros
+
+- Sempre trate erros de forma explícita
+- Use try/catch em operações assíncronas
+- Forneça feedback ao usuário em caso de erro
+- Log erros para debug (console.error em dev)
+
+## Comentários e Documentação
+
+- JSDoc para funções públicas
+- Comentários explicativos para lógica complexa
+- README.md em cada feature principal
+- Documente decisões arquiteturais importantes
+
+## Git
+
+- Commits descritivos e atômicos
+- Branch por feature (`feature/nome-da-feature`)
+- PRs com descrição clara das mudanças
+- Não commite arquivos gerados ou dependências
+
+## Dependências
+
+- Prefira bibliotecas leves e bem mantidas
+- Evite dependências desnecessárias
+- Mantenha dependências atualizadas (security patches)
+- Documente dependências críticas no README
+
+## Estilos
+
+- Use CSS Modules para estilos scoped
+- CSS Variables para temas
+- Mobile-first quando aplicável
+- Consistência visual com design system básico
+
+## Validação
+
+- Valide inputs do usuário
+- Valide dados ao recuperar do storage
+- Mensagens de erro claras e úteis
+- Validação tanto no cliente quanto na lógica de negócio
