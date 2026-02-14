@@ -1,6 +1,7 @@
 import { Button } from '@components/ui'
 import type { MeetingMinutes } from '@/types'
 import { downloadAtaAsHtml, downloadAtaAsJson, printAtaAsPdf } from '../services/exportAta'
+import { encodeAtaToHash } from '@/utils/urlAtaImport'
 import styles from './MeetingMinutesCard.module.css'
 
 export interface MeetingMinutesCardProps {
@@ -126,6 +127,24 @@ export default function MeetingMinutesCard({
           title="Baixar JSON da ata"
         >
           Exportar JSON
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={async () => {
+            const baseUrl = window.location.origin + window.location.pathname
+            const hash = encodeAtaToHash(meetingMinutes)
+            const link = `${baseUrl}#${hash}`
+            try {
+              await navigator.clipboard.writeText(link)
+              alert('Link copiado! Quem acessar abrirá esta ata diretamente.')
+            } catch {
+              alert('Não foi possível copiar o link.')
+            }
+          }}
+          title="Gerar link compartilhável (#base64). Ao acessar, a ata será importada automaticamente."
+        >
+          Copiar link
         </Button>
         {canDelete() && (
           <Button variant="danger" size="sm" onClick={() => onDelete(meetingMinutes.id)}>

@@ -4,11 +4,16 @@
  * - Barra de filtros funcional (data-attributes)
  * - Impressão: cabeçalho repetido, sem quebra no meio de itens, numeração de páginas
  * - JSON embutido para reimportação
+ * - Link para abrir a ata no aplicativo (modo edição)
  */
 import type { MeetingMinutes, Item, HistoricoItem } from '@/types'
 import { sortItemsByNumber } from '@/utils/itemNumbering'
 import { sanitizeHtml } from '@/utils/htmlSanitize'
+import { encodeAtaToHash } from '@/utils/urlAtaImport'
 import { getAtaFilterScript } from './ataFilterScript'
+
+/** URL base do app para links compartilháveis (fallback se não fornecida) */
+const APP_BASE_URL_DEFAULT = 'https://wellbrez.github.io/GeradorDeAtas'
 
 const ID_ATA_JSON = 'ata-data'
 const ITENS_POR_PAGINA = 35
@@ -98,7 +103,12 @@ function buildHeaderBlock(c: MeetingMinutes['cabecalho'], pagina: number, total:
   )
 }
 
-export function buildAtaHtml(ata: MeetingMinutes): string {
+export interface BuildAtaHtmlOptions {
+  /** URL base do aplicativo para o link "Abrir no app". Ex: https://wellbrez.github.io/GeradorDeAtas */
+  appBaseUrl?: string
+}
+
+export function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions): string {
   const c = ata.cabecalho
   const itensOrd = sortItemsByNumber(ata.itens)
 
@@ -191,11 +201,19 @@ export function buildAtaHtml(ata: MeetingMinutes): string {
   const jsonPayload = JSON.stringify(ata).replace(/<\/script>/gi, '<\\/script>')
   const filterScript = getAtaFilterScript()
 
+  const appBaseUrl = options?.appBaseUrl ?? APP_BASE_URL_DEFAULT
+  const hash = encodeAtaToHash(ata)
+  const appLink = appBaseUrl.replace(/\/$/, '') + '#' + hash
+  const linkBlock =
+    '<div class="ata-app-link" style="font-size:9pt;margin-bottom:12px;padding:8px;background:#e0f2f1;border:1px solid #007e7a;border-radius:2px;">' +
+    '<a href="' + esc(appLink) + '" target="_blank" rel="noopener" style="color:#007e7a;text-decoration:underline;font-weight:bold;">🔗 Abrir esta ata no aplicativo (modo edição)</a>' +
+    '</div>'
+
   return [
     '<!DOCTYPE html><html lang="pt-BR">',
     '<head><meta charset="UTF-8"><title>' + esc(c.numero) + '</title><style>' + printCss + '</style></head>',
     '<body style="' + E.body + '">',
-    '<div id="ata-content" style="' + E.container + '">' + paginasHtml.join('') + '</div>',
+    '<div id="ata-content" style="' + E.container + '">' + linkBlock + paginasHtml.join('') + '</div>',
     '<script>' + filterScript + '</script>',
     '<script type="application/json" id="' + ID_ATA_JSON + '">' + jsonPayload + '</script>',
     '</body></html>',
@@ -225,7 +243,8 @@ export function downloadBlob(blob: Blob, filename: string): void {
 }
 
 export function downloadAtaAsHtml(ata: MeetingMinutes): void {
-  const html = buildAtaHtml(ata)
+  const appBaseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : undefined
+  const html = buildAtaHtml(ata, { appBaseUrl })
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
   const name = (ata.cabecalho.numero || 'ata').replace(/[^a-zA-Z0-9.-]/g, '_') + '.html'
   downloadBlob(blob, name)
@@ -239,7 +258,8 @@ export function downloadAtaAsJson(ata: MeetingMinutes): void {
 }
 
 export function printAtaAsPdf(ata: MeetingMinutes): void {
-  const html = buildAtaHtml(ata)
+  const appBaseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : undefined
+  const html = buildAtaHtml(ata, { appBaseUrl })
   const w = window.open('', '_blank')
   if (!w) {
     alert('Permita pop-ups para imprimir a ata.')

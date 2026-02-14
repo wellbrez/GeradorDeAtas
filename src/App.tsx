@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MeetingMinutesList, MeetingMinutesForm } from '@features/atas/components'
-import { getMeetingMinutesById } from '@features/atas/services/meetingMinutesService'
+import { getMeetingMinutesById, createMeetingMinutes } from '@features/atas/services/meetingMinutesService'
+import { parseAtaFromHash } from '@/utils/urlAtaImport'
 import type { MeetingMinutes } from '@/types'
 import styles from './App.module.css'
 
@@ -9,6 +10,24 @@ function App() {
   const [formAta, setFormAta] = useState<MeetingMinutes | null>(null)
   const [formIsCopy, setFormIsCopy] = useState(false)
   const [listKey, setListKey] = useState(0)
+
+  // Importa ata do hash na URL (#base64) e abre o formulário
+  useEffect(() => {
+    const storage = parseAtaFromHash()
+    if (!storage) return
+
+    try {
+      const ata = createMeetingMinutes(storage)
+      setFormAta(ata)
+      setFormIsCopy(false)
+      setFormOpen(true)
+      setListKey((k) => k + 1)
+      // Remove o hash da URL para evitar reimportar ao recarregar
+      window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    } catch (e) {
+      console.error('Erro ao importar ata do link:', e)
+    }
+  }, [])
 
   const handleCreate = () => {
     setFormAta(null)
