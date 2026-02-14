@@ -96,9 +96,9 @@ export default function MeetingMinutesCard({
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => {
-            downloadAtaAsHtml(meetingMinutes)
-            printAtaAsPdf(meetingMinutes)
+          onClick={async () => {
+            await downloadAtaAsHtml(meetingMinutes)
+            await printAtaAsPdf(meetingMinutes)
           }}
           title="Baixar HTML e abrir impressão (Salvar como PDF)"
         >
@@ -107,7 +107,7 @@ export default function MeetingMinutesCard({
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => downloadAtaAsHtml(meetingMinutes)}
+          onClick={async () => { await downloadAtaAsHtml(meetingMinutes) }}
           title="Baixar apenas HTML"
         >
           Exportar HTML
@@ -115,7 +115,7 @@ export default function MeetingMinutesCard({
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => printAtaAsPdf(meetingMinutes)}
+          onClick={async () => { await printAtaAsPdf(meetingMinutes) }}
           title="Abrir impressão (Salvar como PDF)"
         >
           Exportar PDF

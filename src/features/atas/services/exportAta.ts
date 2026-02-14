@@ -4,12 +4,13 @@
  * - Barra de filtros funcional (data-attributes)
  * - Impressão: cabeçalho repetido, sem quebra no meio de itens, numeração de páginas
  * - JSON embutido para reimportação
- * - Link para abrir a ata no aplicativo (modo edição)
+ * - Link no topo (HTML) e QR code no final (HTML e PDF) para acesso ao app
  */
+import QRCode from 'qrcode'
 import type { MeetingMinutes, Item, HistoricoItem } from '@/types'
 import { sortItemsByNumber } from '@/utils/itemNumbering'
 import { sanitizeHtml } from '@/utils/htmlSanitize'
-import { encodeAtaToHash } from '@/utils/urlAtaImport'
+import { encodeAtaToHash, encodeAtaToHashForQr } from '@/utils/urlAtaImport'
 import { getAtaFilterScript } from './ataFilterScript'
 
 /** URL base do app para links compartilháveis (fallback se não fornecida) */
@@ -108,7 +109,7 @@ export interface BuildAtaHtmlOptions {
   appBaseUrl?: string
 }
 
-export function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions): string {
+export async function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions): Promise<string> {
   const c = ata.cabecalho
   const itensOrd = sortItemsByNumber(ata.itens)
 
@@ -191,6 +192,7 @@ export function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions)
   const printCss = `
 @media print {
   #ata-filter-bar { display:none!important; }
+  .ata-app-link { display:none!important; }
   body { padding-top:0!important; }
   .ata-pagina { page-break-inside:avoid; }
   .ata-pagina table tr { page-break-inside:avoid; }
@@ -202,18 +204,43 @@ export function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions)
   const filterScript = getAtaFilterScript()
 
   const appBaseUrl = options?.appBaseUrl ?? APP_BASE_URL_DEFAULT
-  const hash = encodeAtaToHash(ata)
-  const appLink = appBaseUrl.replace(/\/$/, '') + '#' + hash
+  const hashFull = encodeAtaToHash(ata)
+  const hashQr = encodeAtaToHashForQr(ata)
+  const appLink = appBaseUrl.replace(/\/$/, '') + '#' + hashFull
+  const appLinkQr = appBaseUrl.replace(/\/$/, '') + '#' + hashQr
   const linkBlock =
     '<div class="ata-app-link" style="font-size:9pt;margin-bottom:12px;padding:8px;background:#e0f2f1;border:1px solid #007e7a;border-radius:2px;">' +
     '<a href="' + esc(appLink) + '" target="_blank" rel="noopener" style="color:#007e7a;text-decoration:underline;font-weight:bold;">🔗 Abrir esta ata no aplicativo (modo edição)</a>' +
+    '</div>'
+
+  let qrImg = ''
+  try {
+    const dataUrl = await QRCode.toDataURL(appLinkQr, {
+      width: 140,
+      margin: 1,
+      color: { dark: '#000000', light: '#ffffff' },
+      errorCorrectionLevel: 'L',
+    })
+    if (dataUrl && dataUrl.startsWith('data:')) {
+      qrImg = '<img src="' + dataUrl + '" alt="QR Code - link da ata" width="120" height="120" style="display:block;margin:0 auto;" />'
+    }
+  } catch {
+    const apiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=1&data=' + encodeURIComponent(appLinkQr)
+    qrImg = '<img src="' + esc(apiUrl) + '" alt="QR Code - link da ata" width="120" height="120" style="display:block;margin:0 auto;" />'
+  }
+
+  const footerStyle = "page-break-inside:avoid;margin-top:24px;padding-top:20px;padding-bottom:12px;border-top:1px solid #007e7a;text-align:center;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;"
+  const qrFooter =
+    '<div class="ata-qr-footer" style="' + footerStyle + '">' +
+    '<p style="font-size:10pt;margin:0 0 10px 0;color:#007e7a;font-weight:bold;">Edite esta ata</p>' +
+    qrImg +
     '</div>'
 
   return [
     '<!DOCTYPE html><html lang="pt-BR">',
     '<head><meta charset="UTF-8"><title>' + esc(c.numero) + '</title><style>' + printCss + '</style></head>',
     '<body style="' + E.body + '">',
-    '<div id="ata-content" style="' + E.container + '">' + linkBlock + paginasHtml.join('') + '</div>',
+    '<div id="ata-content" style="' + E.container + '">' + linkBlock + paginasHtml.join('') + qrFooter + '</div>',
     '<script>' + filterScript + '</script>',
     '<script type="application/json" id="' + ID_ATA_JSON + '">' + jsonPayload + '</script>',
     '</body></html>',
@@ -242,9 +269,9 @@ export function downloadBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url)
 }
 
-export function downloadAtaAsHtml(ata: MeetingMinutes): void {
+export async function downloadAtaAsHtml(ata: MeetingMinutes): Promise<void> {
   const appBaseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : undefined
-  const html = buildAtaHtml(ata, { appBaseUrl })
+  const html = await buildAtaHtml(ata, { appBaseUrl })
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
   const name = (ata.cabecalho.numero || 'ata').replace(/[^a-zA-Z0-9.-]/g, '_') + '.html'
   downloadBlob(blob, name)
@@ -257,9 +284,9 @@ export function downloadAtaAsJson(ata: MeetingMinutes): void {
   downloadBlob(blob, name)
 }
 
-export function printAtaAsPdf(ata: MeetingMinutes): void {
+export async function printAtaAsPdf(ata: MeetingMinutes): Promise<void> {
   const appBaseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : undefined
-  const html = buildAtaHtml(ata, { appBaseUrl })
+  const html = await buildAtaHtml(ata, { appBaseUrl })
   const w = window.open('', '_blank')
   if (!w) {
     alert('Permita pop-ups para imprimir a ata.')

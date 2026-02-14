@@ -308,4 +308,4 @@ Use estas diretrizes para manter a ferramenta fácil de operar e consistente com
 - **Importação**: no mount do app, ler `window.location.hash`, decodificar base64, parsear JSON, validar estrutura; se válido, `createMeetingMinutes(storage)` e abrir formulário em edição; em seguida `history.replaceState` para remover o hash e evitar reimportação ao recarregar.
 - **Codificação**: usar `TextEncoder` + `btoa` para UTF-8 → base64; `atob` + `TextDecoder` para base64 → UTF-8.
 - **Botão "Copiar link"**: gera URL com hash base64 e copia para clipboard; quem acessa o link importa a ata automaticamente.
-- **HTML/PDF exportados**: incluem link visível "🔗 Abrir esta ata no aplicativo (modo edição)" no topo; ao clicar, abre o app com a ata importada; usar `appBaseUrl` passado pelo caller (`window.location.origin + window.location.pathname`) ou fallback para produção.
+- **HTML/PDF exportados**: link no topo (apenas na tela; oculto em `@media print`) e QR code no final (visível em tela e impressão) com o link da ata editável; QR gerado client-side com `qrcode` (toDataURL); `buildAtaHtml` é async por causa do QR.

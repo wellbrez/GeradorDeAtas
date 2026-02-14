@@ -2,42 +2,23 @@
 
 Sistema web client-side para geração e gerenciamento de atas de reunião com armazenamento local no navegador.
 
+**Aplicação publicada:** [https://wellbrez.github.io/GeradorDeAtas/](https://wellbrez.github.io/GeradorDeAtas/)
+
 ## Características
 
-- ✅ **Armazenamento Local**: Dados persistidos no localStorage do navegador
-- ✅ **Hierarquia de Itens**: Suporte a itens e sub-itens com numeração automática (1, 1.1, 1.1.1)
-- ✅ **Rastreabilidade Total**: Histórico completo de todas as ações realizadas
-- ✅ **Geração Automática de Índices**: Índices hierárquicos gerados automaticamente
-- ✅ **Exportação HTML**: Geração de HTML formatado com paginação automática
-- ✅ **Filtros Interativos**: Filtros no HTML gerado para facilitar visualização
+- **Armazenamento local**: dados persistidos no localStorage do navegador
+- **Hierarquia de itens**: suporte a itens e sub-itens com numeração automática (1, 1.1, 1.1.1)
+- **Rastreabilidade total**: histórico completo de todas as ações
+- **Paleta Vale**: interface com cores e padrões do design Vale
+- **Exportação HTML/PDF**: geração de HTML formatado com paginação, filtros e impressão
+- **Links compartilháveis**: importação de ata via URL (#base64); link "Abrir no app" no HTML/PDF exportados
 
-## Stack Tecnológica
+## Stack
 
 - **React 18+** com TypeScript
 - **Vite** como build tool
 - **localStorage** para persistência
 - **CSS Modules** para estilização
-
-## Estrutura do Projeto
-
-```
-src/
-├── components/          # Componentes reutilizáveis
-│   ├── ui/             # Componentes básicos (Button, Input, etc)
-│   └── layout/          # Componentes de layout
-├── features/           # Features organizadas por domínio
-│   ├── atas/           # Feature de Atas
-│   ├── participantes/   # Feature de Participantes
-│   └── itens/          # Feature de Itens
-├── services/           # Serviços compartilhados
-│   ├── storage/        # Gerenciamento de localStorage
-│   ├── export/         # Exportação de HTML
-│   └── index/          # Geração de índices
-├── hooks/              # Custom hooks compartilhados
-├── utils/              # Funções utilitárias
-├── types/              # Types globais
-└── styles/             # Estilos globais
-```
 
 ## Instalação
 
@@ -57,55 +38,69 @@ npm run dev
 npm run build
 ```
 
-## Preview
+## Deploy (GitHub Pages)
 
 ```bash
-npm run preview
+npm run deploy
 ```
 
-## Funcionalidades Principais
+Publica o build da pasta `dist` na branch `gh-pages` do repositório.
 
-### 1. Gerenciamento de Atas
+## Funcionalidades
+
+### Gerenciamento de atas
+
 - Criar nova ata
 - Editar ata existente
 - Excluir ata
-- Copiar ata (criar nova baseada em existente)
-- Listar todas as atas
+- Copiar ata (cria nova baseada em existente; original fica arquivada)
+- Listar atas ordenadas por data
 
-### 2. Participantes
-- Adicionar participantes
-- Remover participantes
-- Marcar presença (Presente/Ausente)
-- Informações: nome, email, empresa, telefone
+### Etapa 1: Cabeçalho e participantes
 
-### 3. Itens Hierárquicos
-- Criar itens de reunião
-- Criar sub-itens (hierarquia)
-- Numeração automática
-- Edição de descrição
-- Atribuição de responsável
-- Definição de data e status
+- Campos: número, data, tipo, título, projeto, responsável
+- Importar participantes via planilha (xlsx)
+- Participantes: nome, empresa, e-mail, telefone, presença (P/A)
+- Marcar todos ausentes
 
-### 4. Histórico e Rastreabilidade
-- Histórico completo de cada item
-- Timestamp de todas as ações
-- Responsável por cada alteração
-- Status: Pendente, Em Andamento, Concluído, Cancelado, Info
+### Etapa 2: Itens
 
-### 5. Exportação
-- Geração de HTML formatado
-- Paginação automática
-- Estilos profissionais
-- Filtros interativos no HTML gerado
-- Download do arquivo HTML
+- Itens hierárquicos com numeração automática
+- Descrição (rich text), responsável, data, status
+- Filtros: pesquisa por número/texto; ocultar Concluídos/Cancelados/Info não editados no dia
+- Edição inline logo abaixo do item
 
-## Estrutura de Dados
+### Exportação
 
-Ver documentação completa em `STACK_E_ARQUITETURA.md`
+- **Exportar HTML**: download do arquivo HTML com filtros interativos
+- **Exportar PDF**: abre janela de impressão (Ctrl+P)
+- **Exportar JSON**: download dos dados da ata
+- **Copiar link**: gera URL compartilhável (#base64); ao acessar, a ata é importada e aberta em edição
 
-## Regras de Desenvolvimento
+### Links compartilháveis
 
-Ver `.cursorrules` para regras detalhadas de desenvolvimento.
+- URL: `https://wellbrez.github.io/GeradorDeAtas/#<base64-json>`
+- HTML/PDF exportados incluem link "🔗 Abrir esta ata no aplicativo (modo edição)" no topo
+- Quem acessa o link importa a ata automaticamente
+
+## Estrutura do projeto
+
+```
+src/
+├── components/ui/       # Button, Input, Textarea, Select, Modal
+├── features/atas/
+│   ├── components/     # MeetingMinutesList, MeetingMinutesForm, Step1, Step2, etc.
+│   ├── hooks/          # useAtaForm, useMeetingMinutes, useMeetingMinutesList
+│   └── services/       # meetingMinutesService, exportAta, ataFilterScript
+├── services/storage/   # storageService (localStorage)
+├── utils/              # urlAtaImport, htmlSanitize, itemNumbering, id
+├── types/              # tipos globais
+└── styles/             # estilos globais
+```
+
+## Regras de desenvolvimento
+
+Ver `.cursorrules` para regras detalhadas, convenções e lições aprendidas.
 
 ## Licença
 
