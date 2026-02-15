@@ -66,6 +66,8 @@ export default function AchievementsSidebar({
 
   const praiseworthyUnlockedCount = praiseworthyDefs.filter((d) => unlockedIds.has(d.id)).length
   const praiseworthyTotal = praiseworthyDefs.length
+  const completionPercent =
+    praiseworthyTotal > 0 ? Math.round((praiseworthyUnlockedCount / praiseworthyTotal) * 100) : 0
 
   const hoveredDef = hoveredId ? definitions.find((d) => d.id === hoveredId) : null
 
@@ -93,10 +95,18 @@ export default function AchievementsSidebar({
       <div className={styles.panel}>
         <header className={styles.header}>
           <h2 className={styles.title}>Conquistas</h2>
-          <div className={styles.counter} aria-live="polite">
-            <span className={styles.counterValue}>{praiseworthyUnlockedCount}</span>
-            <span className={styles.counterSep}>/</span>
-            <span className={styles.counterTotal}>{praiseworthyTotal}</span>
+          <div className={styles.progressWrap} aria-live="polite">
+            <div className={styles.counter}>
+              <span className={styles.counterValue}>{praiseworthyUnlockedCount}</span>
+              <span className={styles.counterSep}>/</span>
+              <span className={styles.counterTotal}>{praiseworthyTotal}</span>
+              <span className={styles.counterPercent} aria-label={`${completionPercent}% concluído`}>
+                ({completionPercent}%)
+              </span>
+            </div>
+            <div className={styles.progressBarTrack} role="progressbar" aria-valuenow={completionPercent} aria-valuemin={0} aria-valuemax={100} aria-label="Progresso das conquistas">
+              <div className={styles.progressBarFill} style={{ width: `${completionPercent}%` }} />
+            </div>
           </div>
           <p className={styles.hint}>
             Passe o mouse sobre um ícone para ver os detalhes

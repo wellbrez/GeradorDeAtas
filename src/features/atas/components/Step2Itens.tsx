@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Button, ConfirmModal } from '@components/ui'
 import type { Item, ItemStatus, HistoricoItem, Participant } from '@/types'
 import { sanitizeHtml, stripHtml } from '@/utils/htmlSanitize'
@@ -39,6 +39,9 @@ export interface Step2ItensProps {
   dataReuniao: string
   /** Conceder Selos por ação (gamificação). position opcional para toast ao lado do mouse. */
   onAwardSelos?: (baseAmount: number, position?: { clientX: number; clientY: number }) => void
+  /** Quando definido, abre esse item para edição, expande o pai se for subitem e rola até ele; depois chama onFocusNewItemHandled */
+  focusNewItemId?: string | null
+  onFocusNewItemHandled?: () => void
 }
 
 function formatDate(s: string | null): string {
@@ -112,6 +115,61 @@ function itemMatchesSearch(item: Item, query: string): boolean {
   return num.includes(q) || desc.includes(q) || full.includes(q)
 }
 
+const STATUS_PENDENTE_EM_ANDAMENTO: ItemStatus[] = ['Pendente', 'Em Andamento']
+/** Concluído, Cancelado e Info: data e responsável opcionais; quando vazios não exibir alerta nem traço. */
+const STATUS_NAO_EXIGE_DATA_RESP: ItemStatus[] = ['Concluído', 'Cancelado', 'Info']
+
+function hasResponsible(item: Item): boolean {
+  const r = item.UltimoHistorico?.responsavel
+  return !!(r && (r.nome?.trim() || r.email?.trim()))
+}
+
+function hasDescription(item: Item): boolean {
+  const raw = item.UltimoHistorico?.descricao ?? ''
+  return !!stripHtml(raw).trim()
+}
+
+/** Data presente e não vencida (>= hoje). */
+function hasValidData(item: Item): boolean {
+  const data = item.UltimoHistorico?.data
+  if (!data) return false
+  try {
+    const d = new Date(data.split('T')[0])
+    d.setHours(0, 0, 0, 0)
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    return d.getTime() >= hoje.getTime()
+  } catch {
+    return false
+  }
+}
+
+/** Data presente mas já vencida (< hoje). */
+function isDataVencida(item: Item): boolean {
+  const data = item.UltimoHistorico?.data
+  if (!data) return false
+  try {
+    const d = new Date(data.split('T')[0])
+    d.setHours(0, 0, 0, 0)
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    return d.getTime() < hoje.getTime()
+  } catch {
+    return false
+  }
+}
+
+/** Item folha precisa de ajuste: Pendente/Em Andamento sem descrição, responsável ou data válida; Concluído/Cancelado/Info sem descrição. */
+function needsDateAdjustment(item: Item): boolean {
+  const semFilhos = (item.filhos?.length ?? 0) === 0
+  if (!semFilhos) return false
+  const status = (item.UltimoHistorico?.status ?? 'Pendente') as ItemStatus
+  if (STATUS_PENDENTE_EM_ANDAMENTO.includes(status))
+    return !hasDescription(item) || !hasResponsible(item) || !hasValidData(item)
+  if (STATUS_NAO_EXIGE_DATA_RESP.includes(status)) return !hasDescription(item)
+  return false
+}
+
 /** Linhas do histórico com botões de editar data e excluir (X). */
 function HistoricoLines({
   item,
@@ -122,6 +180,7 @@ function HistoricoLines({
   canDeleteHistorico,
   formatDateYmd,
   styles: css,
+  semDescricaoAlert,
 }: {
   item: Item
   editandoHistorico: { itemId: string; historicoId: string; criadoEm: string } | null
@@ -131,6 +190,8 @@ function HistoricoLines({
   canDeleteHistorico: (h: HistoricoItem) => boolean
   formatDateYmd: (s: string | null) => string
   styles: Record<string, string>
+  /** Alerta "sem descrição" a exibir antes dos botões da última linha quando o último histórico não tem descrição */
+  semDescricaoAlert?: React.ReactNode
 }) {
   const historico = item.historico ?? []
   if (historico.length === 0) return <>(sem descrição)</>
@@ -184,6 +245,7 @@ function HistoricoLines({
             ) : (
               <>
                 {datePart}: <span dangerouslySetInnerHTML={{ __html: descricaoHtml }} />
+                {isLast && semDescricaoAlert}
                 <span className={css.historicoActions}>
                   <button
                     type="button"
@@ -233,7 +295,10 @@ export default function Step2Itens({
   onAddParticipant,
   dataReuniao,
   onAwardSelos,
+  focusNewItemId,
+  onFocusNewItemHandled,
 }: Step2ItensProps) {
+  const listRef = useRef<HTMLDivElement>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [hideConcluidosCancInfo, setHideConcluidosCancInfo] = useState(false)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
@@ -309,6 +374,34 @@ export default function Step2Itens({
     })
   }, [itens])
 
+  /** Foco no item recém-adicionado: abrir para edição, expandir pai se for subitem, rolar até ele */
+  useEffect(() => {
+    if (!focusNewItemId || !onFocusNewItemHandled) return
+    const item = itens.find((i) => i.id === focusNewItemId)
+    if (!item) return
+    const temFilhos = (item.filhos?.length ?? 0) > 0
+    setEditandoItemId(focusNewItemId)
+    setEditandoEPai(temFilhos)
+    setDescricao(item.UltimoHistorico?.descricao ?? '')
+    setRespNome(item.UltimoHistorico?.responsavel?.nome ?? '')
+    setRespEmail(item.UltimoHistorico?.responsavel?.email ?? '')
+    setData(item.UltimoHistorico?.data ? item.UltimoHistorico.data.split('T')[0] : '')
+    setStatus((item.UltimoHistorico?.status as ItemStatus) ?? 'Pendente')
+    if (item.pai) {
+      setExpandedIds((prev) => {
+        const next = new Set(prev)
+        next.add(item.pai!)
+        return next
+      })
+    }
+    const t = setTimeout(() => {
+      const el = listRef.current?.querySelector(`[data-item-id="${focusNewItemId}"]`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      onFocusNewItemHandled()
+    }, 80)
+    return () => clearTimeout(t)
+  }, [focusNewItemId, itens, onFocusNewItemHandled])
+
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev)
@@ -332,7 +425,7 @@ export default function Step2Itens({
 
   return (
     <div className={styles.container}>
-      <div className={styles.toolbarTop}>
+      <div className={styles.toolbar}>
         <div className={styles.searchWrap}>
           <input
             type="search"
@@ -350,14 +443,18 @@ export default function Step2Itens({
           />
           Ocultar Concluídos, Cancelados e Info (não editados no dia)
         </label>
-      </div>
-      <div className={styles.toolbar}>
-        <Button variant="primary" onClick={(e) => { onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY }); onAddItemRaiz() }}>
-          Adicionar Item Raiz
-        </Button>
+        <button
+          type="button"
+          className={styles.addItemBtn}
+          onClick={(e) => { onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY }); onAddItemRaiz() }}
+          title="Adicionar item raiz"
+          aria-label="Adicionar item raiz"
+        >
+          ➕
+        </button>
       </div>
 
-      <div className={styles.list}>
+      <div ref={listRef} className={styles.list}>
         {itensRaizVisiveis.length === 0 ? (
           <p className={styles.empty}>
             {itensRaiz.length === 0
@@ -501,6 +598,7 @@ function ItemRow({
     setConfirmExcluirItem(false)
   }
 
+  const dataVencida = isDataVencida(item)
   const nivelClass = temFilhos
     ? (nivel === 1
         ? styles.itemRowComFilhosNivel1
@@ -512,6 +610,7 @@ function ItemRow({
               ? styles.itemRowComFilhosNivel4
               : styles.itemRowComFilhosNivel5)
     : styles.itemRowSemFilhos
+  const precisaAjusteData = needsDateAdjustment(item)
 
   const handleExcluirHistoricoClick = (historicoId: string) => {
     setHistoricoToDelete(historicoId)
@@ -543,11 +642,22 @@ function ItemRow({
       canDeleteHistorico={canDeleteHistorico}
       formatDateYmd={formatDateYmd}
       styles={styles}
+      semDescricaoAlert={!hasDescription(item) ? (
+        <span className={styles.itemMetaAlert} title="Descrição não preenchida">
+          <span className={styles.itemMetaAlertDot} aria-hidden />
+          {' '}sem descrição
+        </span>
+      ) : undefined}
     />
   )
 
   return (
-    <div className={`${styles.itemRow} ${nivelClass}`} style={{ paddingLeft: (nivel - 1) * 10 }}>
+    <div
+      className={`${styles.itemRow} ${nivelClass} ${precisaAjusteData ? styles.itemNeedsDateAdjustment : ''}`}
+      style={{ paddingLeft: (nivel - 1) * 10 }}
+      data-item-id={item.id}
+      title={precisaAjusteData ? 'Sem descrição, responsável ou data/data vencida — preencha para contar na completude' : undefined}
+    >
       <div className={styles.itemHeader}>
         <span className={styles.expandCell}>
           {temFilhos ? (
@@ -568,16 +678,68 @@ function ItemRow({
         <span className={styles.itemDescricao}>
           {descricaoContent}
         </span>
-        {!isItemPai && (
-          <>
-            <span className={styles.itemMeta}>
-              {formatDate(item.UltimoHistorico?.data)} | {item.UltimoHistorico?.responsavel?.nome || '-'}
-            </span>
-            <span className={`${styles.statusBadge} ${styles['status-' + (item.UltimoHistorico?.status || 'Pendente').replace(/\s/g, '')]}`}>
-              {item.UltimoHistorico?.status || 'Pendente'}
-            </span>
-          </>
-        )}
+        {!isItemPai && (() => {
+          const status = (item.UltimoHistorico?.status ?? 'Pendente') as ItemStatus
+          const exigeDataResp = status && STATUS_PENDENTE_EM_ANDAMENTO.includes(status)
+          const historico = item.historico ?? []
+          const anteriores = historico.slice(0, -1)
+          const datePart = exigeDataResp
+            ? !item.UltimoHistorico?.data
+              ? (
+                  <span className={styles.itemMetaAlert} title="Data não definida">
+                    <span className={styles.itemMetaAlertDot} aria-hidden />
+                    sem data
+                  </span>
+                )
+              : dataVencida
+                ? (
+                    <span className={styles.itemMetaAlert} title="Data vencida">
+                      <span className={styles.itemMetaAlertDot} aria-hidden />
+                      {formatDate(item.UltimoHistorico?.data)}
+                    </span>
+                  )
+                : formatDate(item.UltimoHistorico?.data)
+            : item.UltimoHistorico?.data
+              ? formatDate(item.UltimoHistorico?.data)
+              : null
+          const respPart = exigeDataResp
+            ? !hasResponsible(item)
+              ? (
+                  <span className={styles.itemMetaAlert} title="Responsável não definido">
+                    <span className={styles.itemMetaAlertDot} aria-hidden />
+                    sem responsável
+                  </span>
+                )
+              : (item.UltimoHistorico?.responsavel?.nome || '-')
+            : hasResponsible(item)
+              ? (item.UltimoHistorico?.responsavel?.nome ?? '')
+              : null
+          const showDate = datePart != null
+          const showResp = respPart != null
+          return (
+            <>
+              <span className={styles.itemMeta}>
+                {anteriores.length > 0 && (
+                  <span className={styles.itemMetaHistoricoWrap}>
+                    {anteriores.map((h) => (
+                      <span key={h.id} className={styles.itemMetaHistoricoAnterior}>
+                        {formatDate(h.data)} | {h.responsavel?.nome || '-'}
+                      </span>
+                    ))}
+                  </span>
+                )}
+                <span className={styles.itemMetaAtual}>
+                  {showDate && datePart}
+                  {showDate && showResp && ' | '}
+                  {showResp && respPart}
+                </span>
+              </span>
+              <span className={`${styles.statusBadge} ${styles['status-' + (item.UltimoHistorico?.status || 'Pendente').replace(/\s/g, '')]}`}>
+                {item.UltimoHistorico?.status || 'Pendente'}
+              </span>
+            </>
+          )
+        })()}
         <div className={styles.itemActions}>
           <button
             type="button"

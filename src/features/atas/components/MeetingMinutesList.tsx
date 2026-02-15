@@ -1,4 +1,5 @@
 import { useRef, useState, useMemo, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useMeetingMinutesList } from '../hooks/useMeetingMinutesList'
 import MeetingMinutesListByProject from './MeetingMinutesListByProject'
 import MeetingMinutesListFilters, {
@@ -112,6 +113,11 @@ export default function MeetingMinutesList({
   const [shopExpanded, setShopExpanded] = useState(true)
   const htmlInputRef = useRef<HTMLInputElement>(null)
   const jsonInputRef = useRef<HTMLInputElement>(null)
+  const newAtaButtonRef = useRef<HTMLButtonElement>(null)
+  const listSectionRef = useRef<HTMLDivElement>(null)
+  const [newAtaMenuOpen, setNewAtaMenuOpen] = useState(false)
+  const [newAtaMenuAnchor, setNewAtaMenuAnchor] = useState<DOMRect | null>(null)
+  const newAtaMenuRef = useRef<HTMLDivElement>(null)
   const showSelos = useSelosEarned()
 
   const gamification = useGamification(atas)
@@ -238,8 +244,38 @@ export default function MeetingMinutesList({
 
   const handleCreate = (e: React.MouseEvent) => {
     showSelos?.(1, { clientX: e.clientX, clientY: e.clientY })
+    setNewAtaMenuOpen(false)
     onCreate()
   }
+
+  const openNewAtaMenu = (ev?: React.MouseEvent) => {
+    const el = ev?.currentTarget instanceof HTMLElement ? ev.currentTarget : newAtaButtonRef.current
+    if (el) setNewAtaMenuAnchor(el.getBoundingClientRect())
+    setNewAtaMenuOpen((v) => !v)
+  }
+
+  useEffect(() => {
+    if (!newAtaMenuOpen) return
+    const handleClickOutside = (ev: MouseEvent) => {
+      if (newAtaMenuRef.current?.contains(ev.target as Node) || newAtaButtonRef.current?.contains(ev.target as Node)) return
+      setNewAtaMenuOpen(false)
+    }
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [newAtaMenuOpen])
+
+  const newAtaMenuWidth = 280
+  const newAtaMenuEstimatedHeight = 220
+  const newAtaMenuStyle = newAtaMenuAnchor
+    ? (() => {
+        const left = Math.min(newAtaMenuAnchor.left, window.innerWidth - newAtaMenuWidth)
+        const spaceBelow = window.innerHeight - (newAtaMenuAnchor.bottom + 8)
+        const top = spaceBelow >= newAtaMenuEstimatedHeight
+          ? newAtaMenuAnchor.bottom + 8
+          : Math.max(8, newAtaMenuAnchor.top - newAtaMenuEstimatedHeight - 8)
+        return { left, top }
+      })()
+    : undefined
 
   if (loading) {
     return (
@@ -280,58 +316,101 @@ export default function MeetingMinutesList({
             </div>
           </div>
         )}
-        <div className={styles.importExportPanel}>
-          <span className={styles.importExportTitle}>Importar</span>
-          <div className={styles.importExportActions}>
-            <input
-              ref={htmlInputRef}
-              type="file"
-              accept=".html"
-              onChange={handleImportHtml}
-              className={styles.hiddenFileInput}
-              aria-label="Importar HTML"
-            />
-            <input
-              ref={jsonInputRef}
-              type="file"
-              accept=".json"
-              onChange={handleImportJson}
-              className={styles.hiddenFileInput}
-              aria-label="Importar JSON"
-            />
-            <button
-              type="button"
-              className={styles.iconImportBtn}
-              onClick={() => jsonInputRef.current?.click()}
-              title="Importar ata a partir de arquivo JSON"
-              aria-label="Importar JSON"
-            >
-              📄
-            </button>
-            <button
-              type="button"
-              className={styles.iconImportBtn}
-              onClick={() => htmlInputRef.current?.click()}
-              title="Importar ata a partir de HTML exportado"
-              aria-label="Importar HTML"
-            >
-              🌐
-            </button>
-          </div>
-        </div>
         <div className={styles.primaryCta}>
+          <input
+            ref={htmlInputRef}
+            type="file"
+            accept=".html"
+            onChange={handleImportHtml}
+            className={styles.hiddenFileInput}
+            aria-label="Importar HTML"
+          />
+          <input
+            ref={jsonInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImportJson}
+            className={styles.hiddenFileInput}
+            aria-label="Importar JSON"
+          />
           <button
+            ref={newAtaButtonRef}
             type="button"
-            onClick={(e) => handleCreate(e)}
+            onClick={(e) => openNewAtaMenu(e)}
             className={styles.primaryCtaButton}
             title="Adicionar nova ata"
             aria-label="Adicionar nova ata"
+            aria-haspopup="menu"
+            aria-expanded={newAtaMenuOpen}
           >
             <span className={styles.primaryCtaIcon} aria-hidden>➕</span>
             <span className={styles.primaryCtaText}>Nova ata</span>
+            <span className={styles.primaryCtaChevron} aria-hidden>{newAtaMenuOpen ? '▲' : '▼'}</span>
           </button>
         </div>
       </section>
+
+      {newAtaMenuOpen && newAtaMenuAnchor && newAtaMenuStyle &&
+        createPortal(
+          <div
+            ref={newAtaMenuRef}
+            className={styles.newAtaPopup}
+            style={newAtaMenuStyle}
+            role="menu"
+            aria-label="Opções para nova ata"
+          >
+            <button
+              type="button"
+              className={styles.newAtaPopupItem}
+              onClick={handleCreate}
+              role="menuitem"
+            >
+              <span className={styles.newAtaPopupIcon} aria-hidden>📝</span>
+              <span className={styles.newAtaPopupText}>
+                <span className={styles.newAtaPopupLabel}>Adicionar manualmente</span>
+                <span className={styles.newAtaPopupDesc}>Criar ata em branco</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className={styles.newAtaPopupItem}
+              onClick={() => { jsonInputRef.current?.click(); setNewAtaMenuOpen(false) }}
+              role="menuitem"
+            >
+              <span className={styles.newAtaPopupIcon} aria-hidden>📄</span>
+              <span className={styles.newAtaPopupText}>
+                <span className={styles.newAtaPopupLabel}>Importar de JSON</span>
+                <span className={styles.newAtaPopupDesc}>Arquivo .json da ata</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className={styles.newAtaPopupItem}
+              onClick={() => { htmlInputRef.current?.click(); setNewAtaMenuOpen(false) }}
+              role="menuitem"
+            >
+              <span className={styles.newAtaPopupIcon} aria-hidden>🌐</span>
+              <span className={styles.newAtaPopupText}>
+                <span className={styles.newAtaPopupLabel}>Importar de HTML</span>
+                <span className={styles.newAtaPopupDesc}>Arquivo .html exportado</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className={styles.newAtaPopupItem}
+              onClick={() => { setNewAtaMenuOpen(false); listSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}
+              role="menuitem"
+              title="Selecione uma ata na lista e clique em Copiar"
+            >
+              <span className={styles.newAtaPopupIcon} aria-hidden>📋</span>
+              <span className={styles.newAtaPopupText}>
+                <span className={styles.newAtaPopupLabel}>Copiar de outra ata</span>
+                <span className={styles.newAtaPopupDesc}>Escolha uma ata na lista e use Copiar</span>
+              </span>
+            </button>
+          </div>,
+          document.body
+        )}
 
       {importError && (
         <div className={styles.importError} role="alert">
@@ -339,6 +418,7 @@ export default function MeetingMinutesList({
         </div>
       )}
 
+      <div ref={listSectionRef}>
       {atas.length > 0 && (
         <MeetingMinutesListFilters
           atas={atas}
@@ -352,8 +432,8 @@ export default function MeetingMinutesList({
       {atas.length === 0 ? (
         <div className={styles.empty}>
           <p className={styles.emptyText}>Nenhuma ata cadastrada ainda.</p>
-          <Button variant="primary" onClick={handleCreate} className={styles.emptyCta}>
-            Criar primeira ata
+          <Button variant="primary" onClick={(e) => openNewAtaMenu(e)} className={styles.emptyCta}>
+            Nova ata
           </Button>
         </div>
       ) : filteredAtas.length === 0 ? (
@@ -372,6 +452,7 @@ export default function MeetingMinutesList({
           onAwardSelos={showSelos ?? undefined}
         />
       )}
+      </div>
 
       </div>
       {gamificationEnabled && (

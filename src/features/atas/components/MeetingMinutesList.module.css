@@ -44,7 +44,7 @@
 .dashboard {
   display: grid;
   grid-template-columns: 1fr auto;
-  grid-template-areas: "import cta";
+  grid-template-areas: "space cta";
   gap: var(--spacing-lg);
   align-items: start;
   margin-bottom: var(--spacing-xl);
@@ -52,29 +52,24 @@
 
 .dashboardWithGamification {
   grid-template-columns: 1fr auto auto;
-  grid-template-areas: "stats import cta";
+  grid-template-areas: "stats space cta";
 }
 
 @media (max-width: 1024px) {
   .dashboardWithGamification {
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas:
-      "stats stats"
-      "import cta";
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "stats cta";
   }
 }
 
 @media (max-width: 600px) {
   .dashboard {
     grid-template-columns: 1fr;
-    grid-template-areas: "import" "cta";
+    grid-template-areas: "cta";
   }
   .dashboardWithGamification {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "stats"
-      "import"
-      "cta";
+    grid-template-areas: "stats" "cta";
   }
 }
 
@@ -91,31 +86,6 @@
   box-shadow: var(--shadow-sm);
 }
 
-.importExportPanel {
-  grid-area: import;
-  padding: var(--spacing-md);
-  background: var(--color-surface);
-  border-radius: var(--border-radius-lg);
-  border: 1px solid var(--color-border-light);
-  box-shadow: var(--shadow-sm);
-}
-
-.importExportTitle {
-  display: block;
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: var(--spacing-sm);
-}
-
-.importExportActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
-  align-items: center;
-}
 
 .iconImportBtn {
   display: inline-flex;
@@ -175,6 +145,74 @@
 }
 .primaryCtaText {
   line-height: 1;
+}
+.primaryCtaChevron {
+  font-size: 10px;
+  opacity: 0.9;
+  margin-left: 2px;
+}
+
+/* Popup "Nova ata" (opções: manual, import JSON, import HTML, copiar) */
+.newAtaPopup {
+  position: fixed;
+  z-index: 2000;
+  padding: var(--spacing-xs) 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 240px;
+  max-width: 300px;
+}
+
+.newAtaPopupItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: background var(--transition-fast);
+}
+
+.newAtaPopupItem:hover {
+  background: var(--color-primary-light);
+}
+
+.newAtaPopupIcon {
+  font-size: 1rem;
+  line-height: 1.2;
+  flex-shrink: 0;
+  width: 1.5em;
+}
+
+.newAtaPopupText {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.newAtaPopupLabel {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.newAtaPopupDesc {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+  margin-top: 0;
 }
 
 .hiddenFileInput {

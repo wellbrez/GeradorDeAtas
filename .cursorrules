@@ -300,6 +300,17 @@ Use estas diretrizes para manter a ferramenta fácil de operar e consistente com
 
 - Quando houver dúvida sobre fluxo ou regra de negócio, consultar **SistemaReferencia.pa.yaml** (PowerApps) para alinhar ao comportamento do app antigo, adaptando para a paleta e padrões acima.
 
+### Boas práticas de registro na ata (destaques e completude)
+
+Os destaques visuais na etapa de itens (bolinha vermelha, fundo amarelo/vermelho claro) e a barra de progresso servem para **orientar o usuário** a deixar a ata bem registrada.
+
+- **Itens Pendente e Em Andamento (folha):** devem ter **descrição**, **responsável** e **data válida** (não vencida). Quando falta algum, o campo exibe alerta (“sem descrição”, “sem data”, “sem responsável”) ou data vencida com destaque; a linha do item também pode ter destaque (fundo amarelo claro + bolinha vermelha à esquerda).
+- **Itens Concluído, Cancelado e Info (folha):** **só a descrição é obrigatória**. Data e responsável são opcionais: quando preenchidos, exibir o valor; quando vazios, **não exibir alerta nem traço** — deixar em branco.
+- **Descrição:** o alerta “sem descrição” vale para **todos** os status (Pendente, Em Andamento, Concluído, Cancelado, Info); toda ação deve ter descrição registrada.
+- **Completude (barra de progresso):** considera **todos** os itens folha. Cada item conta como “completo” assim: **Pendente/Em Andamento** → descrição + responsável + data válida; **Concluído/Cancelado/Info** → apenas descrição. Ata “completa” quando todos os itens folha estão completos conforme essa regra.
+
+Manter essas regras alinhadas entre `Step2Itens` (exibição e alertas), `CompletudeProgress` (contagem e “ata completa”) e qualquer nova feature que dependa de “item completo”.
+
 ---
 
 ## Lições aprendidas – Exportação HTML e filtros

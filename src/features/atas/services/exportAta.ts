@@ -70,6 +70,36 @@ function descricaoComHistorico(item: Item): string {
     .join('<br/>')
 }
 
+/** Estilo para entradas anteriores de data/responsável no HTML exportado (acima, tachado, texto claro). */
+const ESTILO_HISTORICO_ANTERIOR = 'display:block;text-decoration:line-through;color:#888;font-style:italic;font-size:9pt;'
+
+/** Data da célula com histórico: entradas anteriores tachadas acima, última normal. */
+function dataCellComHistorico(item: Item): string {
+  const hist = item.historico ?? []
+  if (hist.length === 0) return ''
+  return hist
+    .map((h: HistoricoItem, i: number) => {
+      const text = dataBr(h.data)
+      const ultimo = i === hist.length - 1
+      return ultimo ? esc(text) : `<span style="${ESTILO_HISTORICO_ANTERIOR}">${esc(text)}</span>`
+    })
+    .join('')
+}
+
+/** Responsável da célula com histórico: entradas anteriores tachadas acima, última normal. */
+function respCellComHistorico(item: Item): string {
+  const hist = item.historico ?? []
+  if (hist.length === 0) return ''
+  return hist
+    .map((h: HistoricoItem, i: number) => {
+      const r = h.responsavel
+      const text = r?.nome && r?.email ? `${r.nome} / ${r.email}` : (r?.nome || r?.email || '')
+      const ultimo = i === hist.length - 1
+      return ultimo ? esc(text) : `<span style="${ESTILO_HISTORICO_ANTERIOR}">${esc(text)}</span>`
+    })
+    .join('')
+}
+
 function attr(s: string): string {
   return esc(s || '').replace(/"/g, '&quot;')
 }
@@ -140,7 +170,9 @@ export async function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOp
     if (temFilhos) {
       itensRows.push(`<tr style="${E.noBreak}" data-ata-item-row data-ata-parent="1" data-ata-id="${idAttr}" data-ata-pai="${paiAttr}" data-ata-desc="${attr(descNorm)}" data-ata-resp="" data-ata-date="" data-ata-status=""><td style="${E.itemPai}">${esc(item.item)}</td><td style="${E.itemPai}" colspan="4">${descHtml}</td></tr>`)
     } else {
-      itensRows.push(`<tr style="${E.noBreak}" data-ata-item-row data-ata-id="${idAttr}" data-ata-pai="${paiAttr}" data-ata-desc="${attr(descNorm)}" data-ata-resp="${attr(respNorm)}" data-ata-date="${attr(dataNorm)}" data-ata-status="${attr(statusNorm)}"><td style="${E.resp}">${esc(item.item)}</td><td style="${E.resp}">${descHtml}</td><td style="${E.resp}">${esc(respStr)}</td><td style="${E.resp}">${dataStr}</td><td style="${statusEstilo}">${esc(statusDisp)}</td></tr>`)
+      const dataCellHtml = dataCellComHistorico(item)
+      const respCellHtml = respCellComHistorico(item)
+      itensRows.push(`<tr style="${E.noBreak}" data-ata-item-row data-ata-id="${idAttr}" data-ata-pai="${paiAttr}" data-ata-desc="${attr(descNorm)}" data-ata-resp="${attr(respNorm)}" data-ata-date="${attr(dataNorm)}" data-ata-status="${attr(statusNorm)}"><td style="${E.resp}">${esc(item.item)}</td><td style="${E.resp}">${descHtml}</td><td style="${E.resp}">${respCellHtml}</td><td style="${E.resp}">${dataCellHtml}</td><td style="${statusEstilo}">${esc(statusDisp)}</td></tr>`)
     }
   })
 

@@ -21,27 +21,35 @@ const totalParticipantsLifetimeThresholds = [10, 25, 50, 100, 250, 500]
 
 /**
  * Conquistas por Selos acumulados (lifetime).
- * Dificuldade progressiva: ~3 meses com 1 reunião/dia + aprimoramentos para concluir todas.
+ * Escala alta e progressiva: selos podem ser ganhos em muitas ações (cabeçalho, participantes, import, avançar, itens, etc.).
  */
-const lifetimeSelosThresholds = [10, 25, 50, 100, 250, 500, 750, 1250, 2000, 3500]
+const lifetimeSelosThresholds = [
+  100, 300, 750, 2_000, 5_000, 12_500, 30_000, 75_000, 180_000, 450_000,
+  1_000_000, 2_500_000, 5_000_000, 12_000_000, 25_000_000,
+]
 
 function buildLifetimeSelos(): AchievementDefinition[] {
   const names: Record<number, string> = {
-    10: 'Primeiros Selos',
-    25: 'Colecionador',
-    50: 'Acumulador',
-    100: 'Centena',
-    250: 'Quarto de milhar',
-    500: 'Meio milhar',
-    750: 'Três quartos',
-    1250: 'Mil e duzentos',
-    2000: 'Dois mil',
-    3500: 'Mestre dos Selos',
+    100: 'Primeiros Selos',
+    300: 'Colecionador',
+    750: 'Acumulador',
+    2_000: 'Dois mil',
+    5_000: 'Cinco mil',
+    12_500: 'Doze mil e quinhentos',
+    30_000: 'Trinta mil',
+    75_000: 'Setenta e cinco mil',
+    180_000: 'Cento e oitenta mil',
+    450_000: 'Quatrocentos e cinquenta mil',
+    1_000_000: 'Um milhão',
+    2_500_000: 'Dois milhões e meio',
+    5_000_000: 'Cinco milhões',
+    12_000_000: 'Doze milhões',
+    25_000_000: 'Mestre dos Selos',
   }
   return lifetimeSelosThresholds.map((min) => ({
     id: `lifetime_selos_${min}`,
     name: names[min] ?? `${min} Selos`,
-    description: `Acumulou ${min} Selos no total (ganhos ao salvar atas e usados na loja)`,
+    description: `Acumulou ${min.toLocaleString('pt-BR')} Selos no total (ganhos em ações e usados na loja)`,
     icon: '🏅',
     category: 'especial',
     condition: 'lifetime_selos' as const,

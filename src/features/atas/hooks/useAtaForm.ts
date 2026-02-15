@@ -180,7 +180,7 @@ export function useAtaForm(
     setAttendance((prev) => prev.map((p) => ({ ...p, presenca: 'A' as const })))
   }, [])
 
-  const addItemRaiz = useCallback(() => {
+  const addItemRaiz = useCallback((): string => {
     const newId = 'item-' + generateId()
     const hist = createHistoricoVazio()
     const proximoNum = getNextRootNumber(itens)
@@ -197,11 +197,12 @@ export function useAtaForm(
         UltimoHistorico: hist,
       },
     ])
+    return newId
   }, [itens])
 
-  const addSubItem = useCallback((paiId: string) => {
+  const addSubItem = useCallback((paiId: string): string | undefined => {
     const pai = itens.find((i) => i.id === paiId)
-    if (!pai) return
+    if (!pai) return undefined
 
     const newId = 'item-' + generateId()
     const hist = createHistoricoVazio()
@@ -223,6 +224,7 @@ export function useAtaForm(
         i.id === paiId ? { ...i, filhos: [...i.filhos, newId] } : i
       )
     })
+    return newId
   }, [itens])
 
   const updateItemNumber = useCallback((itemId: string, newItem: string) => {

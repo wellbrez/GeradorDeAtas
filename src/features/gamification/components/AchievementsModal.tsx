@@ -32,6 +32,11 @@ export default function AchievementsModal({
   unlockedIds,
   unlockedAt,
 }: AchievementsModalProps) {
+  const praiseworthyDefs = definitions.filter((d) => d.praiseworthy !== false)
+  const unlockedCount = praiseworthyDefs.filter((d) => unlockedIds.has(d.id)).length
+  const total = praiseworthyDefs.length
+  const completionPercent = total > 0 ? Math.round((unlockedCount / total) * 100) : 0
+
   return (
     <Modal
       isOpen={isOpen}
@@ -39,6 +44,17 @@ export default function AchievementsModal({
       title="Conquistas"
       size="lg"
     >
+      <div className={styles.progressWrap} aria-live="polite">
+        <div className={styles.progressText}>
+          <span className={styles.progressCount}>{unlockedCount}/{total}</span>
+          <span className={styles.progressPercent} aria-label={`${completionPercent}% concluído`}>
+            {completionPercent}% concluído
+          </span>
+        </div>
+        <div className={styles.progressBarTrack} role="progressbar" aria-valuenow={completionPercent} aria-valuemin={0} aria-valuemax={100} aria-label="Progresso das conquistas">
+          <div className={styles.progressBarFill} style={{ width: `${completionPercent}%` }} />
+        </div>
+      </div>
       <p className={styles.headerNote}>
         Desbloqueie conquistas ao usar o sistema. Suas conquistas são salvas no navegador e podem ser exportadas junto com as atas.
       </p>

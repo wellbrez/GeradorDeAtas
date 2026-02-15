@@ -61,3 +61,24 @@
   min-height: 0;
   width: 100%;
 }
+
+/* Etapa 2: barra de progresso compacta; lista ocupa o resto */
+.step2Wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.step2Wrap > *:first-child {
+  flex-shrink: 0;
+}
+
+.step2Wrap > *:last-child {
+  flex: 1;
+  min-height: 0;
+}

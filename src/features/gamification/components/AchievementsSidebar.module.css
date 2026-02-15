@@ -36,6 +36,14 @@
   color: var(--color-primary);
 }
 
+.progressWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--spacing-xs);
+  min-width: 140px;
+}
+
 .counter {
   display: inline-flex;
   align-items: baseline;
@@ -64,6 +72,28 @@
   font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-secondary);
+}
+
+.counterPercent {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-left: 4px;
+}
+
+.progressBarTrack {
+  width: 100%;
+  height: 6px;
+  background: var(--color-border-light);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--gamification-gold));
+  border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
 .hint {

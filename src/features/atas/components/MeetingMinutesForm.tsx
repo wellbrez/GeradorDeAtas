@@ -71,6 +71,17 @@ function FormContent({
   const showSelos = useSelosEarned()
   const [showCelebration, setShowCelebration] = useState(false)
   const [selosEarned, setSelosEarned] = useState(0)
+  const [focusedItemId, setFocusedItemId] = useState<string | null>(null)
+
+  const handleAddItemRaiz = useCallback(() => {
+    const id = form.addItemRaiz()
+    setFocusedItemId(id)
+  }, [form.addItemRaiz])
+
+  const handleAddSubItem = useCallback((paiId: string) => {
+    const id = form.addSubItem(paiId)
+    if (id) setFocusedItemId(id)
+  }, [form.addSubItem])
 
   const getFilhos = useMemo(() => {
     return (paiId: string) => form.itens.filter((i) => i.pai === paiId)
@@ -177,7 +188,7 @@ function FormContent({
             <Button
               variant="primary"
               onClick={(e) => {
-                if (gamificationEnabled) showSelos?.(1, { clientX: e.clientX, clientY: e.clientY })
+                if (gamificationEnabled) showSelos?.(3, { clientX: e.clientX, clientY: e.clientY })
                 setCurrentStep(2)
               }}
               disabled={!form.canAvancarEtapa}
@@ -209,10 +220,11 @@ function FormContent({
             onTogglePresenca={form.togglePresenca}
             onMarkAllAbsent={form.markAllAbsent}
             tiposAta={form.TIPOS_ATA}
+            onAwardSelos={gamificationEnabled ? showSelos : undefined}
           />
         )}
         {currentStep === 2 && (
-          <>
+          <div className={styles.step2Wrap}>
             {gamificationEnabled && (
               <CompletudeProgress
                 itens={form.itens}
@@ -223,8 +235,8 @@ function FormContent({
               key={existingAta?.id ?? 'new'}
               itens={form.itens}
               getFilhos={getFilhos}
-              onAddItemRaiz={form.addItemRaiz}
-              onAddSubItem={form.addSubItem}
+              onAddItemRaiz={handleAddItemRaiz}
+              onAddSubItem={handleAddSubItem}
               onAddHistorico={form.addHistoricoToItem}
               onRemoveItem={form.removeItem}
               onRemoveHistorico={form.removeHistorico}
@@ -233,8 +245,10 @@ function FormContent({
               onAddParticipant={form.addParticipant}
               dataReuniao={form.cabecalho.data}
               onAwardSelos={gamificationEnabled ? showSelos : undefined}
+              focusNewItemId={focusedItemId}
+              onFocusNewItemHandled={() => setFocusedItemId(null)}
             />
-          </>
+          </div>
         )}
       </main>
 

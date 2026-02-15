@@ -14,6 +14,8 @@ export interface Step1CabecalhoParticipantesProps {
   onTogglePresenca: (index: number) => void
   onMarkAllAbsent: () => void
   tiposAta: string[]
+  /** Conceder Selos (ex.: 1 por campo preenchido, 1 por participante, 5 por import CSV/Excel). */
+  onAwardSelos?: (baseAmount: number, position?: { clientX: number; clientY: number }) => void
 }
 
 export default function Step1CabecalhoParticipantes({
@@ -26,6 +28,7 @@ export default function Step1CabecalhoParticipantes({
   onTogglePresenca,
   onMarkAllAbsent,
   tiposAta,
+  onAwardSelos,
 }: Step1CabecalhoParticipantesProps) {
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
@@ -38,8 +41,15 @@ export default function Step1CabecalhoParticipantes({
     { type: 'removeParticipant'; index: number } | { type: 'markAllAbsent' } | null
   >(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const awardedHeaderFields = useRef<Set<string>>(new Set())
 
-  const handleAdd = () => {
+  const tryAwardForField = (fieldId: string, value: string | undefined) => {
+    if (!onAwardSelos || !value?.trim() || awardedHeaderFields.current.has(fieldId)) return
+    awardedHeaderFields.current.add(fieldId)
+    onAwardSelos(1)
+  }
+
+  const handleAdd = (ev?: React.MouseEvent) => {
     const n = nome.trim()
     const e = email.trim()
     if (!n || !e) {
@@ -47,6 +57,7 @@ export default function Step1CabecalhoParticipantes({
       return
     }
     onAddParticipant({ nome: n, email: e, empresa: empresa.trim(), telefone: telefone.trim(), presenca })
+    onAwardSelos?.(1, ev ? { clientX: ev.clientX, clientY: ev.clientY } : undefined)
     setNome('')
     setEmail('')
     setEmpresa('')
@@ -82,6 +93,7 @@ export default function Step1CabecalhoParticipantes({
       if (added) parts.push(`${added} adicionado(s)`)
       if (updated) parts.push(`${updated} atualizado(s) para presente`)
       setImportStatus({ type: 'success', message: parts.length ? parts.join('; ') + '.' : 'Nenhuma alteração.' })
+      if (list.length > 0) onAwardSelos?.(5)
     } catch (err) {
       setImportStatus({
         type: 'error',
@@ -122,6 +134,7 @@ export default function Step1CabecalhoParticipantes({
               label="Número da Ata"
               value={cabecalho.numero}
               onChange={(e) => onCabecalhoChange({ numero: e.target.value })}
+              onBlur={() => tryAwardForField('numero', cabecalho.numero)}
               placeholder="Ex: AR-8001PZ-G-00044"
             />
             <Input
@@ -129,6 +142,7 @@ export default function Step1CabecalhoParticipantes({
               type="date"
               value={cabecalho.data}
               onChange={(e) => onCabecalhoChange({ data: e.target.value })}
+              onBlur={() => tryAwardForField('data', cabecalho.data)}
             />
             <div className={styles.inputWithDatalist}>
               <label className={styles.label}>Tipo de reunião</label>
@@ -137,6 +151,7 @@ export default function Step1CabecalhoParticipantes({
                 list="tipo-ata-list"
                 value={cabecalho.tipo}
                 onChange={(e) => onCabecalhoChange({ tipo: e.target.value })}
+                onBlur={() => tryAwardForField('tipo', cabecalho.tipo)}
                 placeholder="Selecione ou digite o tipo"
                 className={styles.input}
               />
@@ -150,6 +165,7 @@ export default function Step1CabecalhoParticipantes({
               label="Responsável"
               value={cabecalho.responsavel}
               onChange={(e) => onCabecalhoChange({ responsavel: e.target.value })}
+              onBlur={() => tryAwardForField('responsavel', cabecalho.responsavel)}
               placeholder="Nome do responsável"
             />
           </div>
@@ -158,6 +174,7 @@ export default function Step1CabecalhoParticipantes({
               label="Projeto"
               value={cabecalho.projeto}
               onChange={(e) => onCabecalhoChange({ projeto: e.target.value })}
+              onBlur={() => tryAwardForField('projeto', cabecalho.projeto)}
               placeholder="Nome do projeto"
               fullWidth
             />
@@ -168,6 +185,7 @@ export default function Step1CabecalhoParticipantes({
             label="Título"
             value={cabecalho.titulo}
             onChange={(e) => onCabecalhoChange({ titulo: e.target.value })}
+            onBlur={() => tryAwardForField('titulo', cabecalho.titulo)}
             placeholder="Título da reunião (até várias linhas)"
             fullWidth
             rows={4}
@@ -246,7 +264,7 @@ export default function Step1CabecalhoParticipantes({
             <option value="P">Presente</option>
             <option value="A">Ausente</option>
           </select>
-          <Button onClick={handleAdd}>Adicionar</Button>
+          <Button onClick={(e) => handleAdd(e)}>Adicionar</Button>
         </div>
 
         <div className={styles.participantList}>
