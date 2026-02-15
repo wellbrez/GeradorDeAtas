@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Input, Button, Textarea } from '@components/ui'
+import { Input, Button, Textarea, ConfirmModal } from '@components/ui'
 import type { Cabecalho, Participant, Presenca } from '@/types'
 import { parseParticipantsFromFile } from '../utils/importParticipants'
 import styles from './Step1CabecalhoParticipantes.module.css'
@@ -34,6 +34,9 @@ export default function Step1CabecalhoParticipantes({
   const [presenca, setPresenca] = useState<Presenca>('P')
   const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; field: 'empresa' | 'telefone' } | null>(null)
+  const [confirmState, setConfirmState] = useState<
+    { type: 'removeParticipant'; index: number } | { type: 'markAllAbsent' } | null
+  >(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleAdd = () => {
@@ -88,7 +91,7 @@ export default function Step1CabecalhoParticipantes({
   }
 
   const handleRemoveClick = (index: number) => {
-    if (window.confirm('Remover este participante da lista?')) onRemoveParticipant(index)
+    setConfirmState({ type: 'removeParticipant', index })
   }
 
   const handleCellSave = (rowIndex: number, field: 'empresa' | 'telefone', value: string) => {
@@ -96,8 +99,17 @@ export default function Step1CabecalhoParticipantes({
     setEditingCell(null)
   }
 
-  const handleMarkAllAbsent = () => {
-    if (window.confirm('Marcar todos os participantes como ausentes?')) onMarkAllAbsent()
+  const handleMarkAllAbsentClick = () => {
+    setConfirmState({ type: 'markAllAbsent' })
+  }
+
+  const handleConfirmModalConfirm = () => {
+    if (confirmState?.type === 'removeParticipant') {
+      onRemoveParticipant(confirmState.index)
+    } else if (confirmState?.type === 'markAllAbsent') {
+      onMarkAllAbsent()
+    }
+    setConfirmState(null)
   }
 
   return (
@@ -189,7 +201,7 @@ export default function Step1CabecalhoParticipantes({
               type="button"
               variant="secondary"
               size="sm"
-              onClick={handleMarkAllAbsent}
+              onClick={handleMarkAllAbsentClick}
               disabled={participants.length === 0}
               title="Marcar todos como ausentes"
             >
@@ -339,6 +351,26 @@ export default function Step1CabecalhoParticipantes({
           )}
         </div>
       </section>
+
+      <ConfirmModal
+        isOpen={confirmState !== null}
+        onClose={() => setConfirmState(null)}
+        onConfirm={handleConfirmModalConfirm}
+        title={
+          confirmState?.type === 'removeParticipant'
+            ? 'Remover participante'
+            : 'Marcar todos ausentes'
+        }
+        message={
+          confirmState?.type === 'removeParticipant'
+            ? 'Remover este participante da lista?'
+            : 'Marcar todos os participantes como ausentes?'
+        }
+        confirmLabel="Confirmar"
+        cancelLabel="Cancelar"
+        confirmVariant={confirmState?.type === 'removeParticipant' ? 'danger' : 'primary'}
+        closeOnOverlayClick={false}
+      />
     </div>
   )
 }

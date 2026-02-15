@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { forwardRef } from 'react'
 import styles from './Button.module.css'
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -12,16 +12,19 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 /**
  * Componente Button reutilizável
  */
-export default function Button({
-  variant = 'primary',
-  size = 'md',
-  fullWidth = false,
-  loading = false,
-  disabled,
-  className = '',
-  children,
-  ...props
-}: ButtonProps) {
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    variant = 'primary',
+    size = 'md',
+    fullWidth = false,
+    loading = false,
+    disabled,
+    className = '',
+    children,
+    ...props
+  }: ButtonProps,
+  ref: React.ForwardedRef<HTMLButtonElement>
+) {
   const classes = [
     styles.button,
     styles[variant],
@@ -34,9 +37,11 @@ export default function Button({
     .join(' ')
 
   return (
-    <button className={classes} disabled={disabled || loading} {...props}>
+    <button ref={ref} className={classes} disabled={disabled || loading} {...props}>
       {loading && <span className={styles.spinner} aria-hidden="true" />}
       <span className={loading ? styles.hidden : ''}>{children}</span>
     </button>
   )
-}
+})
+
+export default Button

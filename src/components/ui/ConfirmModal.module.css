@@ -1,0 +1,5 @@
+.message {
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  line-height: 1.5;
+}

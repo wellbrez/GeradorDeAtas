@@ -21,6 +21,8 @@ export interface RichTextDescricaoProps {
   minRows?: number
   /** @internal usado pelo toolbar para aplicar formato */
   disabled?: boolean
+  /** Chamado quando o usuário aplica formatação (negrito, itálico, cor, etc.) */
+  onFormatApplied?: () => void
 }
 
 /**
@@ -33,6 +35,7 @@ export default function RichTextDescricao({
   placeholder = 'Descrição',
   minRows = 4,
   disabled = false,
+  onFormatApplied,
 }: RichTextDescricaoProps) {
   const elRef = useRef<HTMLDivElement>(null)
 
@@ -54,7 +57,8 @@ export default function RichTextDescricao({
     document.execCommand(cmd, false, value)
     elRef.current?.focus()
     handleInput()
-  }, [handleInput])
+    onFormatApplied?.()
+  }, [handleInput, onFormatApplied])
 
   const applyColor = useCallback(
     (hex: string) => {
@@ -62,8 +66,9 @@ export default function RichTextDescricao({
       document.execCommand('foreColor', false, hex)
       elRef.current?.focus()
       handleInput()
+      onFormatApplied?.()
     },
-    [handleInput, disabled]
+    [handleInput, disabled, onFormatApplied]
   )
 
   return (

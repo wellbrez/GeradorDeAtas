@@ -43,17 +43,6 @@ export default function MeetingMinutesCard({
     }
   }
 
-  const canDelete = () => {
-    try {
-      const dataAta = new Date(meetingMinutes.cabecalho.data)
-      const hoje = new Date()
-      hoje.setHours(0, 0, 0, 0)
-      return dataAta.getTime() === hoje.getTime()
-    } catch {
-      return false
-    }
-  }
-
   return (
     <div className={styles.card}>
       <div className={styles.content}>
@@ -132,6 +121,27 @@ export default function MeetingMinutesCard({
           variant="secondary"
           size="sm"
           onClick={async () => {
+            const payload = {
+              cabecalho: meetingMinutes.cabecalho,
+              attendance: meetingMinutes.attendance,
+              itens: meetingMinutes.itens,
+            }
+            const json = JSON.stringify(payload, null, 0)
+            try {
+              await navigator.clipboard.writeText(json)
+              alert('JSON copiado! Cole no Power App para importar.')
+            } catch {
+              alert('Não foi possível copiar o JSON.')
+            }
+          }}
+          title="Copiar JSON da ata para colar no Power App"
+        >
+          Copiar JSON para Power App
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={async () => {
             const baseUrl = window.location.origin + window.location.pathname
             const hash = encodeAtaToHash(meetingMinutes)
             const link = `${baseUrl}#${hash}`
@@ -146,11 +156,15 @@ export default function MeetingMinutesCard({
         >
           Copiar link
         </Button>
-        {canDelete() && (
-          <Button variant="danger" size="sm" onClick={() => onDelete(meetingMinutes.id)}>
-            Excluir
-          </Button>
-        )}
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={() => onDelete(meetingMinutes.id)}
+          title="Descartar ata (exclusão permanente)"
+          aria-label="Excluir ata"
+        >
+          Descartar
+        </Button>
       </div>
     </div>
   )

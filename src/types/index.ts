@@ -91,3 +91,15 @@ export interface MeetingMinutesStorage {
   attendance: Participant[]
   itens: Item[]
 }
+
+/**
+ * Rascunho de ata (auto-save) para recuperação após fechamento inesperado
+ * @see storageService.getDraft / saveDraft / clearDraft
+ */
+export interface DraftAta {
+  storage: MeetingMinutesStorage
+  currentStep: 1 | 2
+  savedAt: string
+  /** ID da ata em edição, ou null se for nova ata */
+  existingAtaId: string | null
+}

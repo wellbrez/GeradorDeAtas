@@ -3,8 +3,11 @@
  * Fornece funções para salvar, recuperar e gerenciar dados no localStorage
  */
 
+import type { DraftAta, MeetingMinutesStorage } from '@/types'
+
 const STORAGE_KEY_PREFIX = 'atas-reuniao-'
 const STORAGE_KEY_MEETING_MINUTES = `${STORAGE_KEY_PREFIX}meeting-minutes`
+const STORAGE_KEY_DRAFT = `${STORAGE_KEY_PREFIX}draft`
 
 /**
  * Erro customizado para operações de storage
@@ -203,5 +206,68 @@ export const storageService = {
    */
   isAvailable(): boolean {
     return isStorageAvailable()
+  },
+
+  /**
+   * Obtém o rascunho de ata (auto-save), se existir.
+   * Retorna null se não houver rascunho ou se os dados forem inválidos.
+   */
+  getDraft(): DraftAta | null {
+    try {
+      const raw = getItem<unknown>(STORAGE_KEY_DRAFT)
+      if (!raw || typeof raw !== 'object') return null
+      const d = raw as Record<string, unknown>
+      if (
+        !d.storage ||
+        typeof d.currentStep !== 'number' ||
+        (d.currentStep !== 1 && d.currentStep !== 2) ||
+        typeof d.savedAt !== 'string'
+      ) {
+        return null
+      }
+      const storage = d.storage as MeetingMinutesStorage
+      if (
+        !storage.cabecalho ||
+        !Array.isArray(storage.attendance) ||
+        !Array.isArray(storage.itens)
+      ) {
+        return null
+      }
+      return {
+        storage,
+        currentStep: d.currentStep as 1 | 2,
+        savedAt: d.savedAt,
+        existingAtaId: typeof d.existingAtaId === 'string' ? d.existingAtaId : null,
+      }
+    } catch (error) {
+      console.error('Erro ao recuperar rascunho:', error)
+      return null
+    }
+  },
+
+  /**
+   * Salva o rascunho de ata (chamado automaticamente durante preenchimento/edição).
+   */
+  saveDraft(draft: DraftAta): void {
+    try {
+      setItem(STORAGE_KEY_DRAFT, draft)
+    } catch (error) {
+      if (error instanceof StorageError && error.code === 'QUOTA_EXCEEDED') {
+        console.warn('Espaço insuficiente para salvar rascunho; o rascunho não foi persistido.')
+        return
+      }
+      console.error('Erro ao salvar rascunho:', error)
+    }
+  },
+
+  /**
+   * Remove o rascunho (após salvar a ata ou ao descartar explicitamente).
+   */
+  clearDraft(): void {
+    try {
+      removeItem(STORAGE_KEY_DRAFT)
+    } catch (error) {
+      console.error('Erro ao remover rascunho:', error)
+    }
   },
 }

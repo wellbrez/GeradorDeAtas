@@ -1,0 +1,60 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.note {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-sm);
+}
+
+/* Layout vertical para encaixar no painel lateral (sidebar) */
+.slots {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  background: var(--color-surface);
+}
+
+.slotTitle {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.savedAt {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-disabled);
+  font-style: italic;
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-top: auto;
+}
+
+.actions button {
+  flex: 1;
+}
+
+@media (max-width: 600px) {
+  .slots {
+    grid-template-columns: 1fr;
+  }
+}

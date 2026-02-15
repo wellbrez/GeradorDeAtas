@@ -114,6 +114,15 @@ src/
 │   │   ├── hooks/
 │   │   ├── services/
 │   │   └── types.ts
+│   ├── gamification/   # Feature modular: pode ser removida do projeto
+│   │   ├── components/ # UI: StatsCard, LevelBadge, Loja, Conquistas, Saves, Celebration, etc.
+│   │   ├── hooks/      # useGamification
+│   │   ├── types.ts
+│   │   ├── gamificationService.ts  # Estado, Selos, conquistas, upgrades, backup
+│   │   ├── preferences.ts         # get/set gamificationEnabled (localStorage)
+│   │   ├── achievements.config.ts # Níveis (LEVEL_TIERS)
+│   │   ├── achievements.expanded.config.ts # 100+ conquistas
+│   │   └── upgrades.config.ts     # Definições da loja
 │   ├── participantes/
 │   └── itens/
 ├── services/           # Serviços compartilhados
@@ -122,6 +131,15 @@ src/
 ├── types/              # Types globais
 └── styles/             # Estilos globais
 ```
+
+### Gamificação: modularidade e remoção
+
+- A gamificação vive inteiramente em `src/features/gamification/`. Para removê-la do projeto:
+  - Apagar a pasta `src/features/gamification/`.
+  - Remover imports e uso de `@features/gamification` em `App.tsx` e em `MeetingMinutesList`/`MeetingMinutesForm` (checkbox de preferência, LevelBadge, Loja, Saves, StatsCard, Celebration, CompletudeProgress, awardSelosForAta, recordActivityToday, etc.).
+  - Remover variáveis CSS de gamificação em `styles/globals.css` (opcional).
+- A preferência "Gamificação" (checkbox no header) persiste em `localStorage` (`atas-reuniao-gamification-enabled`). Quando desmarcada, toda a UI de gamificação (loja, conquistas, Selos, saves, barra de completude, toast de conquistas) fica oculta; o fluxo de atas continua igual.
+- Não acoplar lógica de negócio de atas ao módulo de gamificação: atas são criadas/editadas/exportadas pelos serviços em `features/atas`; a gamificação apenas consome a lista de atas e concede Selos no salvamento quando a preferência está ativa.
 
 ## Regras Específicas do Projeto
 
@@ -309,3 +327,39 @@ Use estas diretrizes para manter a ferramenta fácil de operar e consistente com
 - **Codificação**: usar `TextEncoder` + `btoa` para UTF-8 → base64; `atob` + `TextDecoder` para base64 → UTF-8.
 - **Botão "Copiar link"**: gera URL com hash base64 e copia para clipboard; quem acessa o link importa a ata automaticamente.
 - **HTML/PDF exportados**: link no topo (apenas na tela; oculto em `@media print`) e QR code no final (visível em tela e impressão) com o link da ata editável; QR gerado client-side com `qrcode` (toDataURL); `buildAtaHtml` é async por causa do QR.
+
+---
+
+## Lições aprendidas – Gamificação
+
+- **Modularidade**: Toda a gamificação fica em `src/features/gamification/`. Nenhuma regra de negócio de atas depende dela; o app apenas chama `awardSelosForAta`, `recordActivityToday` e exibe componentes de gamificação quando a preferência está ativa. Assim, a feature pode ser removida apagando a pasta e os pontos de integração (App, MeetingMinutesList, MeetingMinutesForm).
+- **Preferência do usuário**: Checkbox discreto no header ("Gamificação"), padrão marcado. Valor persistido em `localStorage` (`preferences.ts`). Quando desmarcado, ocultar: LevelBadge, Loja, Saves, StatsCard, modais de conquistas/loja/saves, AchievementToast, CompletudeProgress no formulário; e não conceder Selos nem atualizar streak ao salvar ata.
+- **Estrutura desejada da feature**: `types.ts` (estado, conquistas, upgrades); `gamificationService.ts` (persistência, Selos, conquistas, upgrades, slots de save, backup); `preferences.ts` (preferência ativar/desativar); configs separados para conquistas e upgrades; componentes em `components/`; um único hook `useGamification(atas)` que expõe stats, conquistas, loja e ações.
+- **Tela inicial gamificada**: Organizar a lista principal em áreas claras: (1) container de estatísticas (Selos, atas no mês, nível, etc.) quando gamificação ativa; (2) ícones/ações de gamificação (loja, conquistas, saves) em posição dedicada; (3) importar/exportar (backup, JSON, HTML) em canto próprio; (4) botão principal "Nova ata" em destaque. Manter design acolhedor (espaçamento, cantos arredondados, hierarquia visual) para uma experiência confortável.
+
+### Conquistas (achievements) em ambiente corporativo
+
+- **Tom e entregabilidade**: As conquistas devem ser **entregáveis em ambiente corporativo**: objetivos claros, mensagens neutras e profissionais. Evitar tom "louvável", infantil ou de jogo explícito (ex.: "Você é incrível!", "Game over", "Level up épico"). Preferir descrições factuais (ex.: "Acumulou X Selos", "Total de atas salvas", "Dias seguidos com atas").
+- **Nomes e descrições**: Use linguagem que faria sentido em um relatório ou dashboard interno (metas, marcos, indicadores), não em um jogo casual. Ícones e títulos podem ser leves, mas sem exageros.
+
+### Selos: recompensa por toda nova funcionalidade
+
+- **Regra geral**: Toda **nova funcionalidade** que o usuário aciona (clique em botão, ação de menu, opção de export, adicionar item, editar histórico, etc.) deve ser **recompensada com Selos**, quando a gamificação estiver ativa.
+- **Valor concedido**: Sempre usar o serviço `awardSelos(baseAmount)` (em `gamificationService.ts`), que aplica os **multiplicadores da loja** e persiste o total com 3 decimais. Definir um `baseAmount` por tipo de ação (ex.: 1 para editar/copiar/export, 2 para HTML+PDF juntos, 3 para import).
+- **Onde registrar**: Em cada ponto de integração (MeetingMinutesList, MeetingMinutesListByProject, MeetingMinutesForm, Step2Itens, RichTextDescricao, etc.) chamar `showSelosEarned(baseAmount, position?)` (ou `onAwardSelos(baseAmount, position?)`) no momento da ação, passando o evento do clique em `position` quando houver (para o toast aparecer ao lado do mouse).
+
+### Formatação de Selos (qual função usar)
+
+Toda exibição de **valor de Selos** (ganho, saldo, custo) deve usar as funções centralizadas em `src/features/gamification/selosFormat.ts`, reexportadas por `gamificationService` (e por `@features/gamification`). Padrão inspirado em [Cookie Clicker](https://gist.github.com/mwtaylor/2dff7b041709e51c34a5d7b5dfb971cb): pt-BR, separador de milhares, sufixos (k, M, B, T…) para números grandes, exponencial para valores muito altos.
+
+- **`formatSelosForDisplay(value)`** — use **só para ganho exibido ao usuário** (toast “+ X”, mensagem de celebração ao salvar). Valores &lt; 1000 com 3 decimais (ex.: `1,020`); ≥ 1000 no formato compacto (ex.: `1,23k`). Exportada por `gamificationService`; em componentes importar de `@features/gamification`.
+- **`formatSelos(value, mode)`** — use para **saldo acumulado** (`lifetimeSelos`) e **custos** (preço de upgrades).  
+  - **`mode: 'compact'`**: barra do StatsCard (colapsado), toasts, qualquer lugar com pouco espaço. Até ~6 caracteres; vírgula até 100k, depois sufixos (100k, 10,2M, 1,23B…).  
+  - **`mode: 'standard'`**: painel expandido do StatsCard, loja (ShopSidebar, ShopModal), custos de itens. Até ~13 caracteres; vírgula até 10B, depois sufixos com mais precisão (ex.: 10,000 B).  
+  - Importar de `gamificationService` ou `@features/gamification`; **não** criar formatação local (ex.: `formatSelos` dentro do componente).
+- **Regra prática**: novo texto/UI que mostra número de Selos → usar `formatSelosForDisplay` se for “ganho na hora”; usar `formatSelos(..., 'compact')` ou `formatSelos(..., 'standard')` conforme o espaço disponível. Nunca exibir `lifetimeSelos` ou custos em número “cru” sem passar por uma dessas funções.
+
+### Apresentação de Selos (comportamento e estilo)
+
+- **Toast de ganho**: texto apenas `+ X` (valor já formatado por `formatSelosForDisplay`). Estilo discreto (fundo transparente, ao lado do mouse quando houver clique). Duração ~2 s.
+- **Atualização da contagem**: Componentes que exibem `lifetimeSelos` devem refletir mudanças sem recarregar. O serviço dispara `GAMIFICATION_UPDATED_EVENT` ao persistir; `useGamification` escuta esse evento e atualiza o estado com `getGamificationState()`.

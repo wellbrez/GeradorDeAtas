@@ -1,0 +1,84 @@
+.headerNote {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-md);
+}
+
+.selosDisplay {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--gamification-gold-light);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--gamification-gold);
+}
+
+.selosLabel {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.selosValue {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--gamification-gold);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--border-radius-md);
+  background: var(--color-surface);
+}
+
+.icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.owned {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.cost {
+  font-weight: 600;
+  color: var(--gamification-gold);
+  white-space: nowrap;
+}
+
+.buy {
+  flex-shrink: 0;
+}
+
+.rowDisabled .cost {
+  color: var(--color-text-disabled);
+}

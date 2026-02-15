@@ -1,0 +1,38 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-md);
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.icon {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.title {
+  margin: 0;
+}
+
+.streak {
+  margin-left: var(--spacing-xs);
+  padding-left: var(--spacing-sm);
+  border-left: 1px solid rgba(255, 255, 255, 0.4);
+  font-weight: 500;
+}
+
+.button {
+  composes: badge;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: background var(--transition-fast);
+}
+
+.button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

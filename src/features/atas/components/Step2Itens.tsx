@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Button } from '@components/ui'
+import { Button, ConfirmModal } from '@components/ui'
 import type { Item, ItemStatus, HistoricoItem, Participant } from '@/types'
 import { sanitizeHtml, stripHtml } from '@/utils/htmlSanitize'
 import RichTextDescricao from './RichTextDescricao'
@@ -37,6 +37,8 @@ export interface Step2ItensProps {
   onAddParticipant: (participant: Participant) => void
   /** Data da reunião (YYYY-MM-DD) para filtro "ocultar não editados no dia" */
   dataReuniao: string
+  /** Conceder Selos por ação (gamificação). position opcional para toast ao lado do mouse. */
+  onAwardSelos?: (baseAmount: number, position?: { clientX: number; clientY: number }) => void
 }
 
 function formatDate(s: string | null): string {
@@ -230,6 +232,7 @@ export default function Step2Itens({
   participants,
   onAddParticipant,
   dataReuniao,
+  onAwardSelos,
 }: Step2ItensProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [hideConcluidosCancInfo, setHideConcluidosCancInfo] = useState(false)
@@ -261,6 +264,7 @@ export default function Step2Itens({
 
   const salvarHistorico = () => {
     if (!editandoItemId) return
+    onAwardSelos?.(1)
     onAddHistorico(
       editandoItemId,
       descricao,
@@ -315,6 +319,7 @@ export default function Step2Itens({
   }
 
   const handleAddSubItem = (paiId: string) => {
+    onAwardSelos?.(1)
     onAddSubItem(paiId)
     setExpandedIds((prev) => {
       const next = new Set(prev)
@@ -347,7 +352,7 @@ export default function Step2Itens({
         </label>
       </div>
       <div className={styles.toolbar}>
-        <Button variant="primary" onClick={onAddItemRaiz}>
+        <Button variant="primary" onClick={(e) => { onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY }); onAddItemRaiz() }}>
           Adicionar Item Raiz
         </Button>
       </div>
@@ -395,6 +400,7 @@ export default function Step2Itens({
                 canDeleteHistorico={canDeleteHistorico}
                 formatDateYmd={formatDateYmd}
                 STATUS_OPTIONS={STATUS_OPTIONS}
+                onAwardSelos={onAwardSelos}
             />
           ))
         )}
@@ -436,6 +442,7 @@ interface ItemRowProps {
   canDeleteHistorico: (h: HistoricoItem) => boolean
   formatDateYmd: (s: string | null) => string
   STATUS_OPTIONS: { value: ItemStatus; label: string; hex: string }[]
+  onAwardSelos?: (baseAmount: number, position?: { clientX: number; clientY: number }) => void
 }
 
 function ItemRow({
@@ -471,6 +478,7 @@ function ItemRow({
   canDeleteHistorico,
   formatDateYmd,
   STATUS_OPTIONS,
+  onAwardSelos,
 }: ItemRowProps) {
   const filhos = getFilhos(item.id)
   const temFilhos = filhos.length > 0
@@ -479,13 +487,18 @@ function ItemRow({
   const isEditandoEste = editandoItemId === item.id
   const qtdHistorico = item.historico?.length ?? 0
   const podeExcluirItem = qtdHistorico <= 1
+  const [confirmExcluirItem, setConfirmExcluirItem] = useState(false)
+  const [historicoToDelete, setHistoricoToDelete] = useState<string | null>(null)
 
-  const handleExcluirItem = () => {
+  const handleExcluirItemClick = () => {
     if (!podeExcluirItem) return
-    const msg =
-      'Tem certeza que deseja EXCLUIR este item? Esta ação não pode ser desfeita e excluirá também todos os subitens, se houver.'
-    if (!window.confirm(msg)) return
+    setConfirmExcluirItem(true)
+  }
+
+  const handleExcluirItemConfirm = () => {
+    onAwardSelos?.(1)
     onRemoveItem(item.id)
+    setConfirmExcluirItem(false)
   }
 
   const nivelClass = temFilhos
@@ -500,12 +513,20 @@ function ItemRow({
               : styles.itemRowComFilhosNivel5)
     : styles.itemRowSemFilhos
 
-  const handleExcluirHistorico = (historicoId: string) => {
-    if (!window.confirm('Tem certeza que deseja excluir este histórico?')) return
-    onRemoveHistorico(item.id, historicoId)
+  const handleExcluirHistoricoClick = (historicoId: string) => {
+    setHistoricoToDelete(historicoId)
+  }
+
+  const handleExcluirHistoricoConfirm = () => {
+    if (historicoToDelete) {
+      onAwardSelos?.(1)
+      onRemoveHistorico(item.id, historicoToDelete)
+      setHistoricoToDelete(null)
+    }
   }
 
   const handleSalvarDataHistorico = (historicoId: string, novoCriadoEm: string) => {
+    onAwardSelos?.(1)
     onUpdateHistoricoCriadoEm(item.id, historicoId, novoCriadoEm)
     setEditandoHistorico(null)
   }
@@ -518,7 +539,7 @@ function ItemRow({
       editandoHistorico={editandoHistorico}
       setEditandoHistorico={setEditandoHistorico}
       onSalvarDataHistorico={handleSalvarDataHistorico}
-      onExcluirHistorico={handleExcluirHistorico}
+      onExcluirHistorico={handleExcluirHistoricoClick}
       canDeleteHistorico={canDeleteHistorico}
       formatDateYmd={formatDateYmd}
       styles={styles}
@@ -579,7 +600,7 @@ function ItemRow({
             <button
               type="button"
               className={styles.itemActionIconDanger}
-              onClick={handleExcluirItem}
+              onClick={handleExcluirItemClick}
               disabled={!podeExcluirItem}
               title={
                 podeExcluirItem
@@ -603,6 +624,7 @@ function ItemRow({
                 onChange={setDescricao}
                 placeholder={editandoEPai ? 'Descrição do item (organização)' : 'Descrição'}
                 minRows={4}
+                onFormatApplied={onAwardSelos ? () => onAwardSelos(1) : undefined}
               />
             </div>
             {!editandoEPai && (
@@ -643,7 +665,10 @@ function ItemRow({
                             : {}),
                         }}
                         data-selected={status === opt.value}
-                        onClick={() => setStatus(opt.value)}
+                        onClick={(e) => {
+                          if (opt.value !== status) onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY })
+                          setStatus(opt.value)
+                        }}
                         title={opt.label}
                       >
                         {opt.label}
@@ -697,9 +722,30 @@ function ItemRow({
                 canDeleteHistorico={canDeleteHistorico}
                 formatDateYmd={formatDateYmd}
                 STATUS_OPTIONS={STATUS_OPTIONS}
+                onAwardSelos={onAwardSelos}
               />
             ))
       }
+
+      <ConfirmModal
+        isOpen={confirmExcluirItem}
+        onClose={() => setConfirmExcluirItem(false)}
+        onConfirm={handleExcluirItemConfirm}
+        title="Excluir item"
+        message="Tem certeza que deseja EXCLUIR este item? Esta ação não pode ser desfeita e excluirá também todos os subitens, se houver."
+        confirmLabel="Excluir"
+        closeOnOverlayClick={false}
+      />
+
+      <ConfirmModal
+        isOpen={historicoToDelete !== null}
+        onClose={() => setHistoricoToDelete(null)}
+        onConfirm={handleExcluirHistoricoConfirm}
+        title="Excluir histórico"
+        message="Tem certeza que deseja excluir este histórico?"
+        confirmLabel="Excluir"
+        closeOnOverlayClick={false}
+      />
     </div>
   )
 }

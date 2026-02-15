@@ -23,13 +23,17 @@
   --color-presenca-ausente-bg: #fce8e6;
   
   /* Cores neutras - Tema branco profissional */
-  --color-background: #f8f9fa;
+  --color-background: #f5f7fa;
   --color-surface: #ffffff;
   --color-border: #dee2e6;
   --color-border-light: #e9ecef;
   --color-text: #212529;
   --color-text-secondary: #6c757d;
   --color-text-disabled: #adb5bd;
+  /* Tela inicial: toque acolhedor */
+  --color-warm-bg: #fafbfc;
+  --radius-soft: 12px;
+  --radius-softer: 16px;
   
   /* Espaçamentos */
   --spacing-xs: 4px;
@@ -64,6 +68,15 @@
   --transition-fast: 0.15s ease;
   --transition-base: 0.2s ease;
   --transition-slow: 0.3s ease;
+
+  /* Gamificação (conquistas, níveis, feedback) */
+  --gamification-gold: #c9a227;
+  --gamification-gold-light: #f5e6b8;
+  --gamification-success: #2e7d32;
+  --gamification-success-bg: #e8f5e9;
+  --gamification-locked: #b0bec5;
+  --gamification-streak: #e65100;
+  --gamification-level-bg: linear-gradient(135deg, #007e7a 0%, #004d4b 100%);
 }
 
 * {

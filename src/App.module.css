@@ -11,6 +11,14 @@
   box-shadow: var(--shadow-md);
 }
 
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
 .header h1 {
   color: white;
   margin: 0 0 var(--spacing-sm) 0;
@@ -22,10 +30,31 @@
   font-size: var(--font-size-md);
 }
 
+.gamificationToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.95);
+  user-select: none;
+}
+
+.gamificationToggle input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--gamification-gold, #c9a227);
+}
+
+.gamificationToggleLabel {
+  opacity: 0.9;
+}
+
 .main {
   flex: 1;
   padding: var(--spacing-xl) 0;
   background-color: var(--color-background);
+  min-height: 60vh;
 }
 
 .container {

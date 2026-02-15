@@ -8,6 +8,7 @@ import type {
   HistoricoItem,
   ItemStatus,
   MeetingMinutes,
+  MeetingMinutesStorage,
 } from '@/types'
 
 const TIPOS_ATA = [
@@ -37,12 +38,71 @@ function createHistoricoVazio(): HistoricoItem {
   }
 }
 
-export function useAtaForm(ataExistente: MeetingMinutes | null, isCopy: boolean) {
-  const [cabecalho, setCabecalho] = useState<Cabecalho>(defaultCabecalho())
-  const [attendance, setAttendance] = useState<Participant[]>([])
-  const [itens, setItens] = useState<Item[]>([])
+/**
+ * Hook para gerenciamento do formulário de ata (cabeçalho, participantes, itens).
+ * @param ataExistente - Ata em edição ou null para nova ata
+ * @param isCopy - Se true, está criando uma cópia da ata existente
+ * @param initialDraft - Estado inicial vindo de rascunho restaurado (prioridade sobre ataExistente)
+ */
+export function useAtaForm(
+  ataExistente: MeetingMinutes | null,
+  isCopy: boolean,
+  initialDraft: MeetingMinutesStorage | null = null
+) {
+  const [cabecalho, setCabecalho] = useState<Cabecalho>(() => {
+    if (initialDraft) return { ...initialDraft.cabecalho }
+    if (!ataExistente) return defaultCabecalho()
+    return { ...ataExistente.cabecalho }
+  })
+  const [attendance, setAttendance] = useState<Participant[]>(() => {
+    if (initialDraft) return initialDraft.attendance.map((p: Participant) => ({ ...p }))
+    if (!ataExistente) return []
+    return ataExistente.attendance.map((p: Participant) => ({ ...p }))
+  })
+  const [itens, setItens] = useState<Item[]>(() => {
+    if (initialDraft) {
+      return initialDraft.itens.map((i: Item) => ({
+        ...i,
+        historico: [...(i.historico || [])],
+        UltimoHistorico: { ...i.UltimoHistorico },
+      }))
+    }
+    if (!ataExistente) return []
+    if (isCopy) {
+      const oldToNewId: Record<string, string> = {}
+      ataExistente.itens.forEach((item: Item) => {
+        oldToNewId[item.id] = 'item-' + generateId()
+      })
+      return ataExistente.itens.map((item: Item) => {
+        const newId = oldToNewId[item.id]
+        const ultimo = item.UltimoHistorico
+        const novoUltimo: HistoricoItem = {
+          id: 'hist-' + generateId(),
+          criadoEm: new Date().toISOString(),
+          descricao: ultimo.descricao,
+          responsavel: { ...ultimo.responsavel },
+          data: ultimo.data,
+          status: ultimo.status,
+        }
+        return {
+          ...item,
+          id: newId,
+          criadoEm: new Date().toISOString(),
+          historico: [novoUltimo],
+          UltimoHistorico: novoUltimo,
+          filhos: (item.filhos || []).map((oldChildId: string) => oldToNewId[oldChildId] ?? oldChildId),
+        }
+      })
+    }
+    return ataExistente.itens.map((i: Item) => ({
+      ...i,
+      historico: [...i.historico],
+      UltimoHistorico: { ...i.UltimoHistorico },
+    }))
+  })
 
   useEffect(() => {
+    if (initialDraft) return
     if (!ataExistente) {
       setCabecalho(defaultCabecalho())
       setAttendance([])
