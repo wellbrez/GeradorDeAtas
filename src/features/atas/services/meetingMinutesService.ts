@@ -2,7 +2,7 @@
  * Serviço de gerenciamento de atas de reunião
  */
 import { storageService } from '@services/storage'
-import type { MeetingMinutes, MeetingMinutesStorage, Item, Participant } from '@/types'
+import type { MeetingMinutes, MeetingMinutesStorage, Item, Participant, HistoricoItem } from '@/types'
 
 /**
  * Gera um ID único para uma nova ata
@@ -140,8 +140,47 @@ export function deleteMeetingMinutes(id: string): boolean {
   }
 }
 
+/** Gera ID único para item/histórico na cópia */
+function genCopyId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+}
+
+/** Copia array de histórico com novos IDs; garante UltimoHistorico válido mesmo com JSON malformado */
+function copyHistorico(hist: HistoricoItem[] | undefined, fallbackUltimo: HistoricoItem | undefined): { historico: HistoricoItem[]; UltimoHistorico: HistoricoItem } {
+  const arr = hist && Array.isArray(hist) ? hist : []
+  const now = new Date().toISOString()
+  const emptyResp = { nome: '', email: '' }
+  const ultimoFonte = fallbackUltimo ?? arr[arr.length - 1]
+  const base = ultimoFonte && typeof ultimoFonte === 'object'
+    ? {
+        descricao: ultimoFonte.descricao ?? '',
+        responsavel: ultimoFonte.responsavel ? { ...ultimoFonte.responsavel } : emptyResp,
+        data: ultimoFonte.data ?? null,
+        status: (ultimoFonte.status ?? 'Pendente') as HistoricoItem['status'],
+      }
+    : { descricao: '', responsavel: emptyResp, data: null as string | null, status: 'Pendente' as const }
+
+  if (arr.length === 0) {
+    const unico: HistoricoItem = { id: genCopyId('hist'), criadoEm: now, ...base }
+    return { historico: [unico], UltimoHistorico: unico }
+  }
+
+  const historico: HistoricoItem[] = arr.map((h) => ({
+    id: genCopyId('hist'),
+    criadoEm: h.criadoEm ?? now,
+    descricao: h.descricao ?? '',
+    responsavel: h.responsavel ? { ...h.responsavel } : emptyResp,
+    data: h.data ?? null,
+    status: (h.status ?? 'Pendente') as HistoricoItem['status'],
+  }))
+  const UltimoHistorico = historico[historico.length - 1]!
+  return { historico, UltimoHistorico }
+}
+
 /**
- * Copia uma ata (cria nova baseada em existente), preservando hierarquia de itens
+ * Copia uma ata (cria nova baseada em existente), preservando hierarquia e histórico completo.
+ * Se a fonte tiver itens com id duplicado (ex.: JSON importado), cada item recebe ID único na cópia;
+ * referências pai/filhos usam o primeiro id encontrado para aquele valor.
  */
 export function copyMeetingMinutes(sourceId: string): MeetingMinutes | null {
   try {
@@ -150,28 +189,25 @@ export function copyMeetingMinutes(sourceId: string): MeetingMinutes | null {
       throw new Error(`Ata ${sourceId} não encontrada`)
     }
 
-    const oldToNewId: Record<string, string> = {}
-    source.itens.forEach((item: Item) => {
-      oldToNewId[item.id] = `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const newIdsByIndex = source.itens.map(() => genCopyId('item'))
+    const firstNewIdByOldId: Record<string, string> = {}
+    source.itens.forEach((item: Item, i: number) => {
+      if (firstNewIdByOldId[item.id] === undefined) {
+        firstNewIdByOldId[item.id] = newIdsByIndex[i]!
+      }
     })
 
-    const newItens = source.itens.map((item: Item) => {
-      const newId = oldToNewId[item.id]
-      const newHistId = `hist-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      const ultimo = item.UltimoHistorico
-      const novoUltimo = {
-        ...ultimo,
-        id: newHistId,
-        criadoEm: new Date().toISOString(),
-        responsavel: { ...ultimo.responsavel },
-      }
+    const newItens = source.itens.map((item: Item, i: number) => {
+      const newId = newIdsByIndex[i]!
+      const { historico, UltimoHistorico } = copyHistorico(item.historico, item.UltimoHistorico)
       return {
         ...item,
         id: newId,
+        pai: item.pai ? (firstNewIdByOldId[item.pai] ?? item.pai) : null,
         criadoEm: new Date().toISOString(),
-        filhos: (item.filhos || []).map((oldId: string) => oldToNewId[oldId] ?? oldId),
-        historico: [novoUltimo],
-        UltimoHistorico: novoUltimo,
+        filhos: (item.filhos || []).map((oldId: string) => firstNewIdByOldId[oldId] ?? oldId),
+        historico,
+        UltimoHistorico,
       }
     })
 

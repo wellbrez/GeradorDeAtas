@@ -1,8 +1,8 @@
 /**
  * Botões para exportar e importar backup completo (atas + gamificação) para outro browser.
  */
-import { useRef } from 'react'
-import { Button } from '@components/ui'
+import { useRef, useState } from 'react'
+import { Button, ConfirmModal } from '@components/ui'
 import { buildFullBackupPayload, applyFullBackupPayload } from '../gamificationService'
 import styles from './BackupExportImport.module.css'
 
@@ -12,6 +12,7 @@ export interface BackupExportImportProps {
 
 export default function BackupExportImport({ onImportDone }: BackupExportImportProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
 
   const handleExport = () => {
     const payload = buildFullBackupPayload()
@@ -32,6 +33,13 @@ export default function BackupExportImport({ onImportDone }: BackupExportImportP
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
+    setPendingFile(file)
+  }
+
+  const handleConfirmImport = async () => {
+    if (!pendingFile) return
+    const file = pendingFile
+    setPendingFile(null)
     try {
       const text = await file.text()
       const data = JSON.parse(text) as unknown
@@ -45,6 +53,10 @@ export default function BackupExportImport({ onImportDone }: BackupExportImportP
     } catch (err) {
       alert('Erro ao importar: ' + (err instanceof Error ? err.message : 'arquivo inválido'))
     }
+  }
+
+  const handleCancelImport = () => {
+    setPendingFile(null)
   }
 
   return (
@@ -63,6 +75,16 @@ export default function BackupExportImport({ onImportDone }: BackupExportImportP
       <Button variant="secondary" size="sm" onClick={handleImportClick} title="Restaurar atas e conquistas de um arquivo">
         Importar backup
       </Button>
+      <ConfirmModal
+        isOpen={pendingFile !== null}
+        onClose={handleCancelImport}
+        onConfirm={handleConfirmImport}
+        title="Importar backup"
+        message="Tem certeza? Se importar, irá sobrescrever o conteúdo atual (atas, Selos, conquistas e upgrades)."
+        confirmLabel="Importar"
+        cancelLabel="Cancelar"
+        confirmVariant="danger"
+      />
     </div>
   )
 }

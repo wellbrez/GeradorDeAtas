@@ -6,7 +6,8 @@ import MeetingMinutesListFilters, {
   INITIAL_FILTERS,
   type MeetingMinutesFiltersState,
 } from './MeetingMinutesListFilters'
-import { Button, ConfirmModal } from '@components/ui'
+import { Button, ConfirmModal, Modal } from '@components/ui'
+import { PROMPT_IA_ATA } from '../constants/promptIaAta'
 import { createMeetingMinutes } from '../services/meetingMinutesService'
 import { parseAtaFromHtml } from '../services/exportAta'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
@@ -15,9 +16,9 @@ import {
   StatsCard,
   GamificationCorner,
   AchievementToast,
-  ShopSidebar,
+  ShopOverlay,
   AchievementsSidebar,
-  SavesSidebar,
+  SavesOverlay,
   saveToSlot,
   useSelosEarned,
 } from '@features/gamification'
@@ -110,7 +111,6 @@ export default function MeetingMinutesList({
   const [filters, setFilters] = useState<MeetingMinutesFiltersState>(INITIAL_FILTERS)
   const [ataToDelete, setAtaToDelete] = useState<string | null>(null)
   const [cornerPanel, setCornerPanel] = useState<CornerPanel | null>(null)
-  const [shopExpanded, setShopExpanded] = useState(true)
   const htmlInputRef = useRef<HTMLInputElement>(null)
   const jsonInputRef = useRef<HTMLInputElement>(null)
   const newAtaButtonRef = useRef<HTMLButtonElement>(null)
@@ -118,7 +118,41 @@ export default function MeetingMinutesList({
   const [newAtaMenuOpen, setNewAtaMenuOpen] = useState(false)
   const [newAtaMenuAnchor, setNewAtaMenuAnchor] = useState<DOMRect | null>(null)
   const newAtaMenuRef = useRef<HTMLDivElement>(null)
+  const [showImportFromIAPopup, setShowImportFromIAPopup] = useState(false)
+  const [promptCopied, setPromptCopied] = useState(false)
   const showSelos = useSelosEarned()
+
+  const handleCopyPrompt = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(PROMPT_IA_ATA)
+      setPromptCopied(true)
+      setTimeout(() => setPromptCopied(false), 2000)
+    } catch {
+      // fallback for older browsers
+      const textarea = document.createElement('textarea')
+      textarea.value = PROMPT_IA_ATA
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      setPromptCopied(true)
+      setTimeout(() => setPromptCopied(false), 2000)
+    }
+  }, [])
+
+  const handleOpenImportFromIA = useCallback(() => {
+    setNewAtaMenuOpen(false)
+    setShowImportFromIAPopup(true)
+  }, [])
+
+  const handleCloseImportFromIA = useCallback(() => {
+    setShowImportFromIAPopup(false)
+  }, [])
+
+  const handleImportJsonFromIAPopup = useCallback(() => {
+    setShowImportFromIAPopup(false)
+    jsonInputRef.current?.click()
+  }, [])
 
   const gamification = useGamification(atas)
   const {
@@ -132,7 +166,7 @@ export default function MeetingMinutesList({
     upgradesOwned,
     buyUpgrade,
     getUpgradeCost,
-    unlockedUpgradeDefinitions,
+    upgradeDefinitions,
   } = gamification
   /** Pilha de toasts de conquistas: um por conquista, 6s cada, clique para fechar */
   const [achievementToastStack, setAchievementToastStack] = useState<{ id: string; def: (typeof definitions)[0] }[]>([])
@@ -306,6 +340,9 @@ export default function MeetingMinutesList({
             ? 'Organize e arquive as discussões das suas reuniões.'
             : `${atas.length} ata${atas.length !== 1 ? 's' : ''} · Gerencie e exporte quando quiser.`}
         </p>
+        <p className={styles.backupWarning}>
+          Faça backup sempre que for trocar de computador, navegador ou perfil. Cuidado ao limpar dados do navegador, pois as atas podem ser perdidas. Sempre exporte e arquive no repositório da sua empresa.
+        </p>
       </section>
 
       <section className={`${styles.dashboard} ${gamificationEnabled ? styles.dashboardWithGamification : ''}`}>
@@ -408,9 +445,67 @@ export default function MeetingMinutesList({
                 <span className={styles.newAtaPopupDesc}>Escolha uma ata na lista e use Copiar</span>
               </span>
             </button>
+            <button
+              type="button"
+              className={styles.newAtaPopupItem}
+              onClick={handleOpenImportFromIA}
+              role="menuitem"
+            >
+              <span className={styles.newAtaPopupIcon} aria-hidden>🤖</span>
+              <span className={styles.newAtaPopupText}>
+                <span className={styles.newAtaPopupLabel}>Importar de outra plataforma ou arquivo</span>
+                <span className={styles.newAtaPopupDesc}>Usar IA para converter PDF, transcrição etc.</span>
+              </span>
+            </button>
           </div>,
           document.body
         )}
+
+      <Modal
+        isOpen={showImportFromIAPopup}
+        onClose={handleCloseImportFromIA}
+        title="Importar de outra plataforma ou arquivo"
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={handleCloseImportFromIA}>
+              Fechar
+            </Button>
+            <Button variant="primary" onClick={handleImportJsonFromIAPopup}>
+              Importar JSON
+            </Button>
+          </>
+        }
+      >
+        <div className={styles.importFromIAPopupContent}>
+          <ol className={styles.importFromIASteps}>
+            <li>
+              <strong>Copie o prompt</strong> usando o botão abaixo. O prompt contém instruções completas para um agente de IA converter seu documento em JSON.
+            </li>
+            <li>
+              <strong>Cole o prompt</strong> em ChatGPT, Claude, Copilot ou outro agente de IA, junto com o conteúdo da sua reunião (texto extraído de PDF, transcrição, e-mail, anexo etc.).
+            </li>
+            <li>
+              O agente gerará um <strong>JSON</strong>. Salve o resultado em um arquivo <code>.json</code> (copie apenas o objeto JSON, sem markdown).
+            </li>
+            <li>
+              <strong>Clique em &quot;Importar JSON&quot;</strong> (botão abaixo) e selecione o arquivo <code>.json</code> gerado. A ata será criada e aberta para edição.
+            </li>
+          </ol>
+          <div className={styles.importFromIACopyWrap}>
+            <Button
+              variant="primary"
+              onClick={handleCopyPrompt}
+              className={styles.importFromIACopyBtn}
+            >
+              {promptCopied ? '✓ Copiado!' : 'Copiar prompt'}
+            </Button>
+            {promptCopied && (
+              <span className={styles.importFromIACopiedHint} role="status">Prompt copiado para a área de transferência.</span>
+            )}
+          </div>
+        </div>
+      </Modal>
 
       {importError && (
         <div className={styles.importError} role="alert">
@@ -455,15 +550,12 @@ export default function MeetingMinutesList({
       </div>
 
       </div>
-      {gamificationEnabled && (
+      {gamificationEnabled ? (
         <>
           <GamificationCorner
             levelIcon={stats.level.icon}
             activePanel={cornerPanel}
-            onOpen={(panel) => {
-              setCornerPanel((prev) => (prev === panel ? null : panel))
-              if (panel === 'shop') setShopExpanded(true)
-            }}
+            onOpen={(panel) => setCornerPanel((prev) => (prev === panel ? null : panel))}
           />
           <AchievementsSidebar
             isOpen={cornerPanel === 'achievements'}
@@ -472,24 +564,32 @@ export default function MeetingMinutesList({
             unlockedIds={unlockedIds}
             unlockedAt={unlockedAt}
           />
-          <ShopSidebar
+          <ShopOverlay
             isOpen={cornerPanel === 'shop'}
-            isExpanded={shopExpanded}
             onClose={() => setCornerPanel(null)}
-            onToggleExpand={() => setShopExpanded((s) => !s)}
             lifetimeSelos={lifetimeSelos}
             upgradesOwned={upgradesOwned}
             buyUpgrade={buyUpgrade}
             getUpgradeCost={getUpgradeCost}
-            definitions={unlockedUpgradeDefinitions}
-          />
-          <SavesSidebar
-            isOpen={cornerPanel === 'saves'}
-            onClose={() => setCornerPanel(null)}
-            onLoadDone={refresh}
+            definitions={upgradeDefinitions}
           />
         </>
+      ) : (
+        <button
+          type="button"
+          className={styles.saveBtnStandalone}
+          onClick={() => setCornerPanel('saves')}
+          title="Saves e backup"
+          aria-label="Abrir saves e backup"
+        >
+          <span className={styles.saveBtnIcon} aria-hidden>💾</span>
+        </button>
       )}
+      <SavesOverlay
+        isOpen={cornerPanel === 'saves'}
+        onClose={() => setCornerPanel(null)}
+        onLoadDone={refresh}
+      />
 
       <ConfirmModal
         isOpen={ataToDelete !== null}

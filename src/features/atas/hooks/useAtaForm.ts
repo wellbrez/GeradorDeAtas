@@ -38,6 +38,38 @@ function createHistoricoVazio(): HistoricoItem {
   }
 }
 
+/** Copia histórico completo com novos IDs; trata UltimoHistorico ausente ou malformado (ex.: JSON com ids duplicados) */
+function copyHistoricoInForm(hist: HistoricoItem[] | undefined, fallbackUltimo: HistoricoItem | undefined): { historico: HistoricoItem[]; UltimoHistorico: HistoricoItem } {
+  const arr = hist && Array.isArray(hist) ? hist : []
+  const now = new Date().toISOString()
+  const emptyResp = { nome: '', email: '' }
+  const ultimoFonte = fallbackUltimo ?? arr[arr.length - 1]
+  const base = ultimoFonte && typeof ultimoFonte === 'object'
+    ? {
+        descricao: ultimoFonte.descricao ?? '',
+        responsavel: ultimoFonte.responsavel ? { ...ultimoFonte.responsavel } : emptyResp,
+        data: ultimoFonte.data ?? null,
+        status: (ultimoFonte.status ?? 'Pendente') as ItemStatus,
+      }
+    : { descricao: '', responsavel: emptyResp, data: null as string | null, status: 'Pendente' as ItemStatus }
+
+  if (arr.length === 0) {
+    const unico: HistoricoItem = { id: 'hist-' + generateId(), criadoEm: now, ...base }
+    return { historico: [unico], UltimoHistorico: unico }
+  }
+
+  const historico: HistoricoItem[] = arr.map((h) => ({
+    id: 'hist-' + generateId(),
+    criadoEm: h.criadoEm ?? now,
+    descricao: h.descricao ?? '',
+    responsavel: h.responsavel ? { ...h.responsavel } : emptyResp,
+    data: h.data ?? null,
+    status: (h.status ?? 'Pendente') as ItemStatus,
+  }))
+  const UltimoHistorico = historico[historico.length - 1]!
+  return { historico, UltimoHistorico }
+}
+
 /**
  * Hook para gerenciamento do formulário de ata (cabeçalho, participantes, itens).
  * @param ataExistente - Ata em edição ou null para nova ata
@@ -69,28 +101,22 @@ export function useAtaForm(
     }
     if (!ataExistente) return []
     if (isCopy) {
-      const oldToNewId: Record<string, string> = {}
-      ataExistente.itens.forEach((item: Item) => {
-        oldToNewId[item.id] = 'item-' + generateId()
+      const newIdsByIndex = ataExistente.itens.map(() => 'item-' + generateId())
+      const firstNewIdByOldId: Record<string, string> = {}
+      ataExistente.itens.forEach((item: Item, i: number) => {
+        if (firstNewIdByOldId[item.id] === undefined) firstNewIdByOldId[item.id] = newIdsByIndex[i]!
       })
-      return ataExistente.itens.map((item: Item) => {
-        const newId = oldToNewId[item.id]
-        const ultimo = item.UltimoHistorico
-        const novoUltimo: HistoricoItem = {
-          id: 'hist-' + generateId(),
-          criadoEm: new Date().toISOString(),
-          descricao: ultimo.descricao,
-          responsavel: { ...ultimo.responsavel },
-          data: ultimo.data,
-          status: ultimo.status,
-        }
+      return ataExistente.itens.map((item: Item, i: number) => {
+        const newId = newIdsByIndex[i]!
+        const { historico, UltimoHistorico } = copyHistoricoInForm(item.historico, item.UltimoHistorico)
         return {
           ...item,
           id: newId,
+          pai: item.pai ? (firstNewIdByOldId[item.pai] ?? item.pai) : null,
           criadoEm: new Date().toISOString(),
-          historico: [novoUltimo],
-          UltimoHistorico: novoUltimo,
-          filhos: (item.filhos || []).map((oldChildId: string) => oldToNewId[oldChildId] ?? oldChildId),
+          historico,
+          UltimoHistorico,
+          filhos: (item.filhos || []).map((oldId: string) => firstNewIdByOldId[oldId] ?? oldId),
         }
       })
     }
@@ -119,29 +145,23 @@ export function useAtaForm(
         numero: '',
         data: new Date().toISOString().split('T')[0],
       }))
-      const oldToNewId: Record<string, string> = {}
-      ataExistente.itens.forEach((item: Item) => {
-        oldToNewId[item.id] = 'item-' + generateId()
+      const newIdsByIndex = ataExistente.itens.map(() => 'item-' + generateId())
+      const firstNewIdByOldId: Record<string, string> = {}
+      ataExistente.itens.forEach((item: Item, i: number) => {
+        if (firstNewIdByOldId[item.id] === undefined) firstNewIdByOldId[item.id] = newIdsByIndex[i]!
       })
       setItens(
-        ataExistente.itens.map((item: Item) => {
-          const newId = oldToNewId[item.id]
-          const ultimo = item.UltimoHistorico
-          const novoUltimo: HistoricoItem = {
-            id: 'hist-' + generateId(),
-            criadoEm: new Date().toISOString(),
-            descricao: ultimo.descricao,
-            responsavel: { ...ultimo.responsavel },
-            data: ultimo.data,
-            status: ultimo.status,
-          }
+        ataExistente.itens.map((item: Item, i: number) => {
+          const newId = newIdsByIndex[i]!
+          const { historico, UltimoHistorico } = copyHistoricoInForm(item.historico, item.UltimoHistorico)
           return {
             ...item,
             id: newId,
+            pai: item.pai ? (firstNewIdByOldId[item.pai] ?? item.pai) : null,
             criadoEm: new Date().toISOString(),
-            historico: [novoUltimo],
-            UltimoHistorico: novoUltimo,
-            filhos: (item.filhos || []).map((oldChildId: string) => oldToNewId[oldChildId] ?? oldChildId),
+            historico,
+            UltimoHistorico,
+            filhos: (item.filhos || []).map((oldId: string) => firstNewIdByOldId[oldId] ?? oldId),
           }
         })
       )

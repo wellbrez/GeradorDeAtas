@@ -17,7 +17,7 @@ import { getAtaFilterScript } from './ataFilterScript'
 const APP_BASE_URL_DEFAULT = 'https://wellbrez.github.io/GeradorDeAtas'
 
 const ID_ATA_JSON = 'ata-data'
-const ITENS_POR_PAGINA = 35
+const ITENS_POR_PAGINA = 25
 
 const E = {
   body: "margin:0;padding:0;background:#f5f5f5;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;box-sizing:border-box;",
@@ -57,14 +57,17 @@ function dataYmd(iso: string | null): string {
 
 function nl2br(t: string): string { return t.replace(/\r?\n/g, '<br/>') }
 
-function descricaoComHistorico(item: Item): string {
+function descricaoComHistorico(item: Item, omitDates = false): string {
   const hist = item.historico ?? []
   if (hist.length === 0) return ''
   return hist
     .map((h: HistoricoItem, i: number) => {
-      const dt = dataYmd(h.criadoEm)
       const desc = sanitizeHtml(h.descricao || '')
       const ultimo = i === hist.length - 1
+      if (omitDates) {
+        return ultimo ? desc : `<i style="color:lightgray">${desc}</i>`
+      }
+      const dt = dataYmd(h.criadoEm)
       return ultimo ? `${dt}: ${desc}` : `<i style="color:lightgray">${dt}: ${desc}</i>`
     })
     .join('<br/>')
@@ -125,7 +128,7 @@ function buildHeaderBlock(c: MeetingMinutes['cabecalho'], pagina: number, total:
   return (
     `<table style="${E.cabPrincipal}" cellpadding="5" cellspacing="0">` +
     `<tr style="${E.noBreak}"><td width="20%" style="${E.cabCentro}"></td><td width="20%" style="${E.cabCentro}"></td><td width="20%" style="${E.cabCentro}">Classificação<br/>USO RESTRITO</td><td colspan="2" width="60%" style="${E.cabEsq}">${projeto}</td></tr>` +
-    `<tr style="${E.noBreak}"><td colspan="3" style="${E.cabEsq}"><strong>${titulo}</strong></td><td style="${E.cabEsq}">Número: <strong>${esc(c.numero)} Rev. 0</strong><br/>Tipo: <strong>${esc(c.tipo)}</strong></td><td style="${E.cabCentro}">Página<br/><strong><span class="ata-pagina-num">${pagina}</span> de ${total}</strong></td></tr>` +
+    `<tr style="${E.noBreak}"><td colspan="3" style="${E.cabEsq}"><strong>${titulo}</strong></td><td style="${E.cabEsq}">Número: <strong>${esc(c.numero)} Rev. 0</strong><br/>Tipo: <strong>${esc(c.tipo)}</strong></td><td class="ata-pagina-num-cell" style="${E.cabCentro}">Página<br/><strong><span class="ata-pagina-num">${pagina} de ${total}</span></strong></td></tr>` +
     `<tr style="${E.noBreak}"><td colspan="5" style="${E.cabSemBorda}">` +
     `<table style="${E.tabela}" cellpadding="5" cellspacing="0">` +
     `<tr style="${E.noBreak}"><td style="${E.cabTexto}width:20%;">Data</td><td style="${E.resp}width:30%;">${dataBr(c.data)}</td><td style="${E.cabTexto}width:20%;">Responsável</td><td style="${E.resp}width:30%;">${esc(c.responsavel)}</td></tr>` +
@@ -152,7 +155,7 @@ export async function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOp
   const itensRows: string[] = []
   itensOrd.forEach((item) => {
     const temFilhos = (item.filhos?.length ?? 0) > 0
-    const descHtml = descricaoComHistorico(item)
+    const descHtml = descricaoComHistorico(item, temFilhos)
     const resp = item.UltimoHistorico?.responsavel
     const respStr = resp?.nome && resp?.email ? `${resp.nome} / ${resp.email}` : ((resp?.nome || resp?.email) ?? '') as string
     const dataStr = dataBr(item.UltimoHistorico?.data ?? null)
@@ -222,13 +225,26 @@ export async function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOp
   }
 
   const printCss = `
+@page {
+  margin: 12mm 8mm 18mm 8mm;
+  @bottom-center {
+    content: "Página " counter(page) " de " counter(pages);
+    font-size: 10pt;
+    font-family: 'Vale Sans', 'Segoe UI', Arial, sans-serif;
+    font-weight: bold;
+    color: #333;
+  }
+}
+
 @media print {
   #ata-filter-bar { display:none!important; }
   .ata-app-link { display:none!important; }
-  body { padding-top:0!important; }
+  body { padding:0!important; margin:0!important; }
+  #ata-content { padding:0!important; margin:0!important; min-height:auto!important; }
   .ata-pagina { page-break-inside:avoid; }
   .ata-pagina table tr { page-break-inside:avoid; }
   .ata-pagina thead { display:table-header-group; }
+  .ata-pagina-num-cell { display:none!important; }
 }
 `
 
