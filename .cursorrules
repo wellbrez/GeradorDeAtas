@@ -337,7 +337,7 @@ Manter essas regras alinhadas entre `Step2Itens` (exibição e alertas), `Comple
 - **Importação**: no mount do app, ler `window.location.hash`, decodificar base64, parsear JSON, validar estrutura; se válido, `createMeetingMinutes(storage)` e abrir formulário em edição; em seguida `history.replaceState` para remover o hash e evitar reimportação ao recarregar.
 - **Codificação**: usar `TextEncoder` + `btoa` para UTF-8 → base64; `atob` + `TextDecoder` para base64 → UTF-8.
 - **Botão "Copiar link"**: gera URL com hash base64 e copia para clipboard; quem acessa o link importa a ata automaticamente.
-- **HTML/PDF exportados**: link no topo (apenas na tela; oculto em `@media print`) e QR code no final (visível em tela e impressão) com o link da ata editável; QR gerado client-side com `qrcode` (toDataURL); `buildAtaHtml` é async por causa do QR.
+- **HTML/PDF exportados**: link no topo "Abrir esta ata no aplicativo" (oculto em `@media print`). O JSON da ata fica embutido em `<script type="application/json" id="ata-data">`, não é exibido na tela nem na impressão; a recuperação é feita ao abrir o HTML no navegador e clicar no link (que leva à SPA com hash). Para encapsular o JSON num PDF de forma invisível mas recuperável: o HTML gerado já contém o JSON no script; ao imprimir para PDF o conteúdo do script não aparece. Quem precisar recuperar os dados abre o .html no navegador e usa o link; para PDF puro com metadados customizados seria necessário uso de biblioteca (ex.: pdf-lib) para injetar o JSON como metadado ou arquivo embutido.
 
 ---
 

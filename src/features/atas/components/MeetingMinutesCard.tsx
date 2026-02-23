@@ -2,6 +2,7 @@ import { Button } from '@components/ui'
 import type { MeetingMinutes } from '@/types'
 import { downloadAtaAsHtml, downloadAtaAsJson, printAtaAsPdf } from '../services/exportAta'
 import { encodeAtaToHash } from '@/utils/urlAtaImport'
+import { getEnvConfig } from '@services/envConfig'
 import styles from './MeetingMinutesCard.module.css'
 
 export interface MeetingMinutesCardProps {
@@ -85,9 +86,9 @@ export default function MeetingMinutesCard({
         <Button
           variant="secondary"
           size="sm"
-          onClick={async () => {
-            await downloadAtaAsHtml(meetingMinutes)
-            await printAtaAsPdf(meetingMinutes)
+          onClick={() => {
+            downloadAtaAsHtml(meetingMinutes)
+            printAtaAsPdf(meetingMinutes)
           }}
           title="Baixar HTML e abrir impressão (Salvar como PDF)"
         >
@@ -96,7 +97,7 @@ export default function MeetingMinutesCard({
         <Button
           variant="secondary"
           size="sm"
-          onClick={async () => { await downloadAtaAsHtml(meetingMinutes) }}
+          onClick={() => downloadAtaAsHtml(meetingMinutes)}
           title="Baixar apenas HTML"
         >
           Exportar HTML
@@ -104,7 +105,7 @@ export default function MeetingMinutesCard({
         <Button
           variant="secondary"
           size="sm"
-          onClick={async () => { await printAtaAsPdf(meetingMinutes) }}
+          onClick={() => printAtaAsPdf(meetingMinutes)}
           title="Abrir impressão (Salvar como PDF)"
         >
           Exportar PDF
@@ -129,14 +130,18 @@ export default function MeetingMinutesCard({
             const json = JSON.stringify(payload, null, 0)
             try {
               await navigator.clipboard.writeText(json)
-              alert('JSON copiado! Cole no Power App para importar.')
+              const { powerAppsUrl } = getEnvConfig()
+              if (powerAppsUrl?.trim()) {
+                window.open(powerAppsUrl.trim(), '_blank', 'noopener,noreferrer')
+              }
+              alert(powerAppsUrl?.trim() ? 'JSON copiado! A página do Power App foi aberta em nova aba.' : 'JSON copiado! Cole no Power App para importar.')
             } catch {
               alert('Não foi possível copiar o JSON.')
             }
           }}
-          title="Copiar JSON da ata para colar no Power App"
+          title="Copiar JSON da ata e abrir Power App (se configurado)"
         >
-          Copiar JSON para Power App
+          Exportar para Power Apps
         </Button>
         <Button
           variant="secondary"

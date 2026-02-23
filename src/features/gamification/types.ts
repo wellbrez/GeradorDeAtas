@@ -127,12 +127,20 @@ export interface GamificationStats {
   nextLevelAtas: number
 }
 
+/** Configuração de ambiente (Power Apps URL, logomarca) para inclusão no backup */
+export interface EnvConfigBackup {
+  powerAppsUrl?: string
+  logoDataUrl?: string
+}
+
 /** Payload completo para export/import entre browsers */
 export interface FullBackupPayload {
   version: number
   exportedAt: string
   meetingMinutes: MeetingMinutesBackupItem[]
   gamification: GamificationState
+  /** Configuração de ambiente (URL Power Apps, logo); opcional para compatibilidade com backups antigos */
+  envConfig?: EnvConfigBackup
 }
 
 /** Item de ata no backup (dados crus como armazenados) */

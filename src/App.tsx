@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MeetingMinutesList, MeetingMinutesForm } from '@features/atas/components'
+import { MeetingMinutesList, MeetingMinutesForm, EnvConfigModal } from '@features/atas/components'
 import { getMeetingMinutesById, createMeetingMinutes } from '@features/atas/services/meetingMinutesService'
 import { parseAtaFromHash } from '@/utils/urlAtaImport'
 import { getGamificationEnabled, setGamificationEnabled, SelosEarnedToastProvider } from '@features/gamification'
@@ -12,6 +12,7 @@ function App() {
   const [formIsCopy, setFormIsCopy] = useState(false)
   const [listKey, setListKey] = useState(0)
   const [gamificationEnabled, setGamificationEnabledState] = useState(getGamificationEnabled)
+  const [configModalOpen, setConfigModalOpen] = useState(false)
 
   const handleGamificationToggle = (checked: boolean) => {
     setGamificationEnabled(checked)
@@ -95,9 +96,19 @@ function App() {
               />
               <span className={styles.gamificationToggleLabel}>Gamificação</span>
             </label>
+            <button
+              type="button"
+              className={styles.configButton}
+              onClick={() => setConfigModalOpen(true)}
+              title="URL do Power Apps e logomarca"
+              aria-label="Configurações do ambiente"
+            >
+              Configurações
+            </button>
           </div>
         </div>
       </header>
+      <EnvConfigModal isOpen={configModalOpen} onClose={() => setConfigModalOpen(false)} />
 
       <main className={styles.main}>
         <div className={styles.container}>

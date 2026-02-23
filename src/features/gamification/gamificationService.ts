@@ -23,6 +23,7 @@ import { LEVEL_TIERS } from './achievements.config'
 import { ACHIEVEMENT_DEFINITIONS } from './achievements.expanded.config'
 import { UPGRADE_DEFINITIONS } from './upgrades.config'
 import { storageService } from '@services/storage'
+import { getEnvConfig, setEnvConfig } from '@services/envConfig'
 import { getBusinessDayStreak, isHoliday, isWeekend } from './brazilianCalendar'
 import { formatSelosGain } from './selosFormat'
 
@@ -576,6 +577,7 @@ export function buildFullBackupPayload(): FullBackupPayload {
     exportedAt: new Date().toISOString(),
     meetingMinutes,
     gamification: getGamificationState(),
+    envConfig: getEnvConfig(),
   }
 }
 
@@ -587,6 +589,11 @@ export function applyFullBackupPayload(payload: unknown): boolean {
   if (!payload || typeof payload !== 'object') return false
   const p = payload as Record<string, unknown>
   if (p.version !== BACKUP_PAYLOAD_VERSION || !Array.isArray(p.meetingMinutes)) return false
+
+  const envConfig = p.envConfig as { powerAppsUrl?: string; logoDataUrl?: string } | undefined
+  if (envConfig && typeof envConfig === 'object') {
+    setEnvConfig(envConfig)
+  }
 
   const gamification = p.gamification as GamificationState | undefined
   if (gamification && typeof gamification.unlockedAchievements === 'object') {

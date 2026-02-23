@@ -3,14 +3,13 @@
  * - Layout idêntico ao app anterior (Vale Sans, #007e7a, etc.)
  * - Barra de filtros funcional (data-attributes)
  * - Impressão: cabeçalho repetido, sem quebra no meio de itens, numeração de páginas
- * - JSON embutido para reimportação
- * - Link no topo (HTML) e QR code no final (HTML e PDF) para acesso ao app
+ * - JSON embutido em <script id="ata-data"> (não exibido na tela nem na impressão; recuperável via link "Abrir no app")
  */
-import QRCode from 'qrcode'
 import type { MeetingMinutes, Item, HistoricoItem } from '@/types'
 import { sortItemsByNumber } from '@/utils/itemNumbering'
 import { sanitizeHtml } from '@/utils/htmlSanitize'
-import { encodeAtaToHash, encodeAtaToHashForQr } from '@/utils/urlAtaImport'
+import { encodeAtaToHash } from '@/utils/urlAtaImport'
+import { getEnvConfig } from '@services/envConfig'
 import { getAtaFilterScript } from './ataFilterScript'
 
 /** URL base do app para links compartilháveis (fallback se não fornecida) */
@@ -121,13 +120,19 @@ function stripHtml(html: string): string {
 
 /**
  * Gera o bloco de cabeçalho da ata (para repetir em cada página).
+ * @param logoDataUrl - Opcional: data URL da logomarca para o canto superior esquerdo
  */
-function buildHeaderBlock(c: MeetingMinutes['cabecalho'], pagina: number, total: number): string {
+function buildHeaderBlock(c: MeetingMinutes['cabecalho'], pagina: number, total: number, logoDataUrl?: string | null): string {
   const titulo = nl2br(esc(c.titulo || ''))
   const projeto = nl2br(esc(c.projeto || ''))
+  const logoCellStyle = E.cabCentro + ';display:flex;justify-content:center;align-items:center;min-height:56px;min-width:120px;width:20%;box-sizing:border-box;'
+  const logoCell = logoDataUrl && logoDataUrl.startsWith('data:image')
+    ? `<img src="${esc(logoDataUrl)}" alt="Logo" style="max-width:100%;max-height:56px;width:auto;height:auto;object-fit:contain;display:block;border:none;outline:none;vertical-align:middle;" />`
+    : ''
+  const cabPrincipalFixed = E.cabPrincipal + ';table-layout:fixed;'
   return (
-    `<table style="${E.cabPrincipal}" cellpadding="5" cellspacing="0">` +
-    `<tr style="${E.noBreak}"><td width="20%" style="${E.cabCentro}"></td><td width="20%" style="${E.cabCentro}"></td><td width="20%" style="${E.cabCentro}">Classificação<br/>USO RESTRITO</td><td colspan="2" width="60%" style="${E.cabEsq}">${projeto}</td></tr>` +
+    `<table style="${cabPrincipalFixed}" cellpadding="5" cellspacing="0">` +
+    `<tr style="${E.noBreak}"><td style="${logoCell ? logoCellStyle : E.cabCentro + ';width:20%;'}">${logoCell}</td><td width="20%" style="${E.cabCentro}"></td><td width="20%" style="${E.cabCentro}">Classificação<br/>USO RESTRITO</td><td colspan="2" width="60%" style="${E.cabEsq}">${projeto}</td></tr>` +
     `<tr style="${E.noBreak}"><td colspan="3" style="${E.cabEsq}"><strong>${titulo}</strong></td><td style="${E.cabEsq}">Número: <strong>${esc(c.numero)} Rev. 0</strong><br/>Tipo: <strong>${esc(c.tipo)}</strong></td><td class="ata-pagina-num-cell" style="${E.cabCentro}">Página<br/><strong><span class="ata-pagina-num">${pagina} de ${total}</span></strong></td></tr>` +
     `<tr style="${E.noBreak}"><td colspan="5" style="${E.cabSemBorda}">` +
     `<table style="${E.tabela}" cellpadding="5" cellspacing="0">` +
@@ -140,10 +145,13 @@ function buildHeaderBlock(c: MeetingMinutes['cabecalho'], pagina: number, total:
 export interface BuildAtaHtmlOptions {
   /** URL base do aplicativo para o link "Abrir no app". Ex: https://wellbrez.github.io/GeradorDeAtas */
   appBaseUrl?: string
+  /** Data URL da logomarca (ex.: data:image/png;base64,...) para exibir no canto superior esquerdo do cabeçalho */
+  logoDataUrl?: string | null
 }
 
-export async function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions): Promise<string> {
+export function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions): string {
   const c = ata.cabecalho
+  const logoDataUrl = options?.logoDataUrl ?? null
   const itensOrd = sortItemsByNumber(ata.itens)
 
   const participantesRows = ata.attendance.map((p) => {
@@ -187,7 +195,7 @@ export async function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOp
     const fim = Math.min(inicio + ITENS_POR_PAGINA, itensRows.length)
     const linhasPagina = itensRows.slice(inicio, fim).join('')
 
-    const header = buildHeaderBlock(c, p + 1, numPaginas)
+    const header = buildHeaderBlock(c, p + 1, numPaginas, logoDataUrl)
     const isFirst = p === 0
 
     let tbodyContent: string
@@ -253,42 +261,17 @@ export async function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOp
 
   const appBaseUrl = options?.appBaseUrl ?? APP_BASE_URL_DEFAULT
   const hashFull = encodeAtaToHash(ata)
-  const hashQr = encodeAtaToHashForQr(ata)
   const appLink = appBaseUrl.replace(/\/$/, '') + '#' + hashFull
-  const appLinkQr = appBaseUrl.replace(/\/$/, '') + '#' + hashQr
   const linkBlock =
     '<div class="ata-app-link" style="font-size:9pt;margin-bottom:12px;padding:8px;background:#e0f2f1;border:1px solid #007e7a;border-radius:2px;">' +
     '<a href="' + esc(appLink) + '" target="_blank" rel="noopener" style="color:#007e7a;text-decoration:underline;font-weight:bold;">🔗 Abrir esta ata no aplicativo (modo edição)</a>' +
-    '</div>'
-
-  let qrImg = ''
-  try {
-    const dataUrl = await QRCode.toDataURL(appLinkQr, {
-      width: 140,
-      margin: 1,
-      color: { dark: '#000000', light: '#ffffff' },
-      errorCorrectionLevel: 'L',
-    })
-    if (dataUrl && dataUrl.startsWith('data:')) {
-      qrImg = '<img src="' + dataUrl + '" alt="QR Code - link da ata" width="120" height="120" style="display:block;margin:0 auto;" />'
-    }
-  } catch {
-    const apiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&margin=1&data=' + encodeURIComponent(appLinkQr)
-    qrImg = '<img src="' + esc(apiUrl) + '" alt="QR Code - link da ata" width="120" height="120" style="display:block;margin:0 auto;" />'
-  }
-
-  const footerStyle = "page-break-inside:avoid;margin-top:24px;padding-top:20px;padding-bottom:12px;border-top:1px solid #007e7a;text-align:center;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;"
-  const qrFooter =
-    '<div class="ata-qr-footer" style="' + footerStyle + '">' +
-    '<p style="font-size:10pt;margin:0 0 10px 0;color:#007e7a;font-weight:bold;">Edite esta ata</p>' +
-    qrImg +
     '</div>'
 
   return [
     '<!DOCTYPE html><html lang="pt-BR">',
     '<head><meta charset="UTF-8"><title>' + esc(c.numero) + '</title><style>' + printCss + '</style></head>',
     '<body style="' + E.body + '">',
-    '<div id="ata-content" style="' + E.container + '">' + linkBlock + paginasHtml.join('') + qrFooter + '</div>',
+    '<div id="ata-content" style="' + E.container + '">' + linkBlock + paginasHtml.join('') + '</div>',
     '<script>' + filterScript + '</script>',
     '<script type="application/json" id="' + ID_ATA_JSON + '">' + jsonPayload + '</script>',
     '</body></html>',
@@ -317,24 +300,31 @@ export function downloadBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url)
 }
 
-export async function downloadAtaAsHtml(ata: MeetingMinutes): Promise<void> {
+export function downloadAtaAsHtml(ata: MeetingMinutes): void {
   const appBaseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : undefined
-  const html = await buildAtaHtml(ata, { appBaseUrl })
+  const { logoDataUrl } = getEnvConfig()
+  const html = buildAtaHtml(ata, { appBaseUrl, logoDataUrl })
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
   const name = (ata.cabecalho.numero || 'ata').replace(/[^a-zA-Z0-9.-]/g, '_') + '.html'
   downloadBlob(blob, name)
 }
 
 export function downloadAtaAsJson(ata: MeetingMinutes): void {
-  const payload = { cabecalho: ata.cabecalho, attendance: ata.attendance, itens: ata.itens }
+  const { logoDataUrl } = getEnvConfig()
+  const payload = {
+    cabecalho: { ...ata.cabecalho, ...(logoDataUrl ? { logoDataUrl } : {}) },
+    attendance: ata.attendance,
+    itens: ata.itens,
+  }
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' })
   const name = (ata.cabecalho.numero || 'ata').replace(/[^a-zA-Z0-9.-]/g, '_') + '.json'
   downloadBlob(blob, name)
 }
 
-export async function printAtaAsPdf(ata: MeetingMinutes): Promise<void> {
+export function printAtaAsPdf(ata: MeetingMinutes): void {
   const appBaseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : undefined
-  const html = await buildAtaHtml(ata, { appBaseUrl })
+  const { logoDataUrl } = getEnvConfig()
+  const html = buildAtaHtml(ata, { appBaseUrl, logoDataUrl })
   const w = window.open('', '_blank')
   if (!w) {
     alert('Permita pop-ups para imprimir a ata.')

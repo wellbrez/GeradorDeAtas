@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import type { MeetingMinutes } from '@/types'
 import { downloadAtaAsHtml, downloadAtaAsJson, printAtaAsPdf } from '../services/exportAta'
 import { encodeAtaToHash } from '@/utils/urlAtaImport'
+import { getEnvConfig } from '@services/envConfig'
 import styles from './MeetingMinutesListByProject.module.css'
 
 export interface MeetingMinutesListByProjectProps {
@@ -137,16 +138,18 @@ function MeetingMinutesRowCompact({
         {canEdit(meetingMinutes) &&
           popupItem('✏️', 'Editar', 'Abrir ata para alterar', (e) => { onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY }); onEdit(meetingMinutes.id); onCloseMenu() })}
         {popupItem('📋', 'Copiar', 'Criar nova ata igual (original fica arquivada)', (e) => { onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY }); onCopy(meetingMinutes.id); onCloseMenu() })}
-        {popupItem('🌐📄', 'HTML e PDF', 'Baixar HTML e imprimir como PDF', async (e) => { onAwardSelos?.(2, { clientX: e.clientX, clientY: e.clientY }); await downloadAtaAsHtml(meetingMinutes); await printAtaAsPdf(meetingMinutes); onCloseMenu() })}
-        {popupItem('🌐', 'Exportar HTML', 'Baixar arquivo .html da ata', async (e) => { onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY }); await downloadAtaAsHtml(meetingMinutes); onCloseMenu() })}
-        {popupItem('📄', 'Imprimir PDF', 'Abrir diálogo de impressão (Ctrl+P)', async (e) => { onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY }); await printAtaAsPdf(meetingMinutes); onCloseMenu() })}
+        {popupItem('🌐📄', 'HTML e PDF', 'Baixar HTML e imprimir como PDF', (e) => { onAwardSelos?.(2, { clientX: e.clientX, clientY: e.clientY }); downloadAtaAsHtml(meetingMinutes); printAtaAsPdf(meetingMinutes); onCloseMenu() })}
+        {popupItem('🌐', 'Exportar HTML', 'Baixar arquivo .html da ata', (e) => { onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY }); downloadAtaAsHtml(meetingMinutes); onCloseMenu() })}
+        {popupItem('📄', 'Imprimir PDF', 'Abrir diálogo de impressão (Ctrl+P)', (e) => { onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY }); printAtaAsPdf(meetingMinutes); onCloseMenu() })}
         {popupItem('{}', 'Baixar JSON', 'Arquivo .json com os dados da ata', (e) => { onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY }); downloadAtaAsJson(meetingMinutes); onCloseMenu() })}
-        {popupItem('📋{}', 'Copiar JSON', 'Colar no Power App ou outro sistema', async (e) => {
+        {popupItem('📋{}', 'Exportar para Power Apps', 'Copiar JSON e abrir Power App (se configurado)', async (e) => {
           onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY })
           const payload = { cabecalho: meetingMinutes.cabecalho, attendance: meetingMinutes.attendance, itens: meetingMinutes.itens }
           try {
             await navigator.clipboard.writeText(JSON.stringify(payload, null, 0))
-            alert('JSON copiado! Cole no Power App para importar.')
+            const { powerAppsUrl } = getEnvConfig()
+            if (powerAppsUrl?.trim()) window.open(powerAppsUrl.trim(), '_blank', 'noopener,noreferrer')
+            alert(powerAppsUrl?.trim() ? 'JSON copiado! A página do Power App foi aberta.' : 'JSON copiado! Cole no Power App para importar.')
           } catch { alert('Não foi possível copiar o JSON.') }
           onCloseMenu()
         })}
@@ -203,7 +206,7 @@ function MeetingMinutesRowCompact({
             className={styles.quickIcon}
             title="Exportar HTML"
             aria-label="Exportar HTML"
-            onClick={async (e) => { e.stopPropagation(); onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY }); await downloadAtaAsHtml(meetingMinutes) }}
+            onClick={(e) => { e.stopPropagation(); onAwardSelos?.(1, { clientX: e.clientX, clientY: e.clientY }); downloadAtaAsHtml(meetingMinutes) }}
           >
             🌐
           </button>
