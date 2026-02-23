@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Button, ConfirmModal } from '@components/ui'
 import type { Item, ItemStatus, HistoricoItem, Participant } from '@/types'
 import { sanitizeHtml, stripHtml } from '@/utils/htmlSanitize'
@@ -347,6 +347,19 @@ export default function Step2Itens({
     setStatus('Pendente')
   }
 
+  /** Remove item e, se era o que estava sendo editado, reseta o estado de edição para habilitar os demais botões. */
+  const handleRemoveItem = useCallback(
+    (itemId: string) => {
+      onRemoveItem(itemId)
+      if (editandoItemId === itemId) {
+        setEditandoItemId(null)
+        setEditandoEPai(false)
+        setEditandoHistorico(null)
+      }
+    },
+    [onRemoveItem, editandoItemId]
+  )
+
   const itensRaiz = itens.filter((i) => !i.pai)
 
   const visibleIds = useMemo(() => {
@@ -483,7 +496,7 @@ export default function Step2Itens({
               status={status}
               setStatus={setStatus}
               onAddSubItem={handleAddSubItem}
-              onRemoveItem={onRemoveItem}
+              onRemoveItem={handleRemoveItem}
                 onRemoveHistorico={onRemoveHistorico}
                 onUpdateHistoricoCriadoEm={onUpdateHistoricoCriadoEm}
                 participants={participants}

@@ -92,9 +92,9 @@ function App() {
                 type="checkbox"
                 checked={gamificationEnabled}
                 onChange={(e) => handleGamificationToggle(e.target.checked)}
-                aria-label="Usar gamificação (conquistas, Selos, loja)"
+                aria-label="Habilitar interações (conquistas, Selos, loja)"
               />
-              <span className={styles.gamificationToggleLabel}>Gamificação</span>
+              <span className={styles.gamificationToggleLabel}>Habilitar interações</span>
             </label>
             <button
               type="button"

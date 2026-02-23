@@ -1,6 +1,6 @@
 /**
- * Preferência de gamificação: usuário pode desativar (oculta loja, conquistas, Selos, etc.).
- * Persistida no localStorage; padrão: ativada (true).
+ * Preferência de gamificação: usuário pode ativar/desativar (oculta loja, conquistas, Selos, etc.).
+ * Persistida no localStorage; padrão: desativada (false).
  * Mantido no módulo de gamificação para remoção modular futura.
  */
 const PREF_KEY = 'atas-reuniao-gamification-enabled'
@@ -8,10 +8,10 @@ const PREF_KEY = 'atas-reuniao-gamification-enabled'
 export function getGamificationEnabled(): boolean {
   try {
     const v = localStorage.getItem(PREF_KEY)
-    if (v === null) return true
+    if (v === null) return false
     return v === 'true'
   } catch {
-    return true
+    return false
   }
 }
 
