@@ -44,9 +44,20 @@ function esc(s: string): string {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
+/**
+ * Interpreta string de data como dia local (evita deslocamento de timezone na exibição).
+ * Strings "YYYY-MM-DD" sem hora são interpretadas como UTC pelo Date(), o que em fusos
+ * como Brasil (UTC-3) faz a data aparecer como dia anterior.
+ */
+function parseDateOnlyAsLocal(s: string): Date {
+  const t = (s || '').trim()
+  if (t.length === 10 && t[4] === '-' && t[7] === '-') return new Date(t + 'T12:00:00')
+  return new Date(s)
+}
+
 function dataBr(iso: string | null): string {
   if (!iso) return ''
-  try { return new Date(iso).toLocaleDateString('pt-BR') } catch { return iso }
+  try { return parseDateOnlyAsLocal(iso).toLocaleDateString('pt-BR') } catch { return iso }
 }
 
 function dataYmd(iso: string | null): string {

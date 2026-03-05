@@ -8,6 +8,28 @@ import styles from './Step2Itens.module.css'
 
 const STATUS_TO_HIDE = ['Concluído', 'Cancelado', 'Info'] as const
 
+/**
+ * Interpreta string de data como dia local (evita deslocamento de timezone).
+ * Strings "YYYY-MM-DD" sem hora são interpretadas como UTC pelo Date(), o que em fusos
+ * como Brasil (UTC-3) faz a data aparecer como dia anterior. Usar T12:00:00 força o dia correto.
+ */
+function parseDateOnlyAsLocal(s: string): Date {
+  const trimmed = (s || '').trim()
+  if (trimmed.length === 10 && trimmed[4] === '-' && trimmed[7] === '-') {
+    return new Date(trimmed + 'T12:00:00')
+  }
+  return new Date(s)
+}
+
+function formatDate(s: string | null): string {
+  if (!s) return '-'
+  try {
+    return parseDateOnlyAsLocal(s).toLocaleDateString('pt-BR')
+  } catch {
+    return s
+  }
+}
+
 /** Opções de status com cores da paleta Vale (como no app antigo) */
 const STATUS_OPTIONS: { value: ItemStatus; label: string; hex: string }[] = [
   { value: 'Pendente', label: 'Pendente', hex: '#ECB11F' },
@@ -44,21 +66,17 @@ export interface Step2ItensProps {
   onFocusNewItemHandled?: () => void
 }
 
-function formatDate(s: string | null): string {
-  if (!s) return '-'
-  try {
-    return new Date(s).toLocaleDateString('pt-BR')
-  } catch {
-    return s
-  }
-}
-
-/** Formata data para exibição no texto (yyyy-mm-dd) */
+/** Formata data para exibição no texto (yyyy-mm-dd) em dia local. */
 function formatDateYmd(s: string | null): string {
   if (!s) return ''
   try {
-    const d = new Date(s)
-    return d.toISOString().split('T')[0]
+    const trimmed = s.trim()
+    if (trimmed.length === 10 && trimmed[4] === '-' && trimmed[7] === '-') return trimmed
+    const d = parseDateOnlyAsLocal(s)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
   } catch {
     return s
   }
@@ -129,16 +147,24 @@ function hasDescription(item: Item): boolean {
   return !!stripHtml(raw).trim()
 }
 
+/** Retorna hoje em YYYY-MM-DD (meia-noite local). */
+function todayYmd(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 /** Data presente e não vencida (>= hoje). */
 function hasValidData(item: Item): boolean {
   const data = item.UltimoHistorico?.data
   if (!data) return false
   try {
-    const d = new Date(data.split('T')[0])
-    d.setHours(0, 0, 0, 0)
-    const hoje = new Date()
-    hoje.setHours(0, 0, 0, 0)
-    return d.getTime() >= hoje.getTime()
+    const dayStr = data.length === 10 && data[4] === '-' && data[7] === '-'
+      ? data
+      : formatDateYmd(data)
+    return dayStr >= todayYmd()
   } catch {
     return false
   }
@@ -149,11 +175,10 @@ function isDataVencida(item: Item): boolean {
   const data = item.UltimoHistorico?.data
   if (!data) return false
   try {
-    const d = new Date(data.split('T')[0])
-    d.setHours(0, 0, 0, 0)
-    const hoje = new Date()
-    hoje.setHours(0, 0, 0, 0)
-    return d.getTime() < hoje.getTime()
+    const dayStr = data.length === 10 && data[4] === '-' && data[7] === '-'
+      ? data
+      : formatDateYmd(data)
+    return dayStr < todayYmd()
   } catch {
     return false
   }
