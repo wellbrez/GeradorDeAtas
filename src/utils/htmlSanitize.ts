@@ -1,8 +1,13 @@
 /**
  * Sanitiza HTML para exibição segura (descrição rich text).
  * Permite: b, i, u, br, p, span, font. Em span preserva style com color/background-color; font color vira span com style.
+ * Tags de bloco não permitidas (ex.: div que o Chrome insere ao pressionar Enter) são convertidas em conteúdo + <br/>
+ * para preservar as quebras de linha na visualização.
  */
 const ALLOWED_TAGS = ['b', 'i', 'u', 'br', 'p', 'span', 'font']
+
+/** Tags de bloco que, quando não permitidas, devem gerar quebra de linha antes e depois do conteúdo (ex.: div no Chrome). */
+const BLOCK_TAGS_AS_BR = ['div']
 
 /** Conteúdo perigoso que nunca deve aparecer em style. */
 const UNSAFE_IN_STYLE = /expression\s*\(|javascript\s*:|vbscript\s*:/i
@@ -49,7 +54,9 @@ export function sanitizeHtml(html: string): string {
     const el = node as Element
     const tag = el.tagName.toLowerCase()
     if (!ALLOWED_TAGS.includes(tag)) {
-      return Array.from(node.childNodes).map(walk).join('')
+      const inner = Array.from(node.childNodes).map(walk).join('')
+      if (BLOCK_TAGS_AS_BR.includes(tag)) return '<br/>' + inner + '<br/>'
+      return inner
     }
     const inner = Array.from(node.childNodes).map(walk).join('')
     if (tag === 'br') return '<br/>'
@@ -65,7 +72,10 @@ export function sanitizeHtml(html: string): string {
     }
     return `<${tag}${styleAttr}>${inner}</${tag}>`
   }
-  return walk(doc.body)
+  let out = walk(doc.body)
+  out = out.replace(/^<br\s*\/?>/i, '')
+  out = out.replace(/(<br\s*\/?>){2,}/gi, '<br/>')
+  return out
 }
 
 /** Remove tags HTML e retorna só o texto (para busca). */

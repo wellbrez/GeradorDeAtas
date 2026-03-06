@@ -90,7 +90,7 @@ src/
 ├── components/ui/       # Button, Input, Textarea, Select, Modal
 ├── features/atas/
 │   ├── components/     # MeetingMinutesList, MeetingMinutesForm, Step1, Step2, etc.
-│   ├── hooks/          # useAtaForm, useMeetingMinutes, useMeetingMinutesList
+│   ├── hooks/          # useAtaForm, useMeetingMinutesList
 │   └── services/       # meetingMinutesService, exportAta, ataFilterScript
 ├── services/storage/   # storageService (localStorage)
 ├── utils/              # urlAtaImport, htmlSanitize, itemNumbering, id

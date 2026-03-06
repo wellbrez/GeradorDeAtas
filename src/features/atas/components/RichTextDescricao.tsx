@@ -53,6 +53,16 @@ export default function RichTextDescricao({
     onChange(el.innerHTML)
   }, [onChange])
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        document.execCommand('insertHTML', false, '<br>')
+      }
+    },
+    []
+  )
+
   const exec = useCallback((cmd: string, value?: string) => {
     document.execCommand(cmd, false, value)
     elRef.current?.focus()
@@ -127,6 +137,7 @@ export default function RichTextDescricao({
         contentEditable={!disabled}
         suppressContentEditableWarning
         onInput={handleInput}
+        onKeyDown={handleKeyDown}
         data-placeholder={placeholder}
         style={{ minHeight: `${minRows * 1.5}em` }}
       />

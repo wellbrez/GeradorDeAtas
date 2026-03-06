@@ -51,23 +51,6 @@ function toStorage(obj: MeetingMinutes | MeetingMinutesStorage): MeetingMinutesS
   }
 }
 
-/** Formato mínimo para QR: {c,a,i} e itens com {id,item,nivel,pai,filhos,criadoEm,u} onde u=UltimoHistorico. */
-function toMinimalPayload(ata: MeetingMinutesStorage): unknown {
-  return {
-    c: ata.cabecalho,
-    a: ata.attendance,
-    i: ata.itens.map((item) => ({
-      id: item.id,
-      item: item.item,
-      nivel: item.nivel,
-      pai: item.pai,
-      filhos: item.filhos,
-      criadoEm: item.criadoEm,
-      u: item.UltimoHistorico,
-    })),
-  }
-}
-
 function expandMinimalJson(jsonStr: string): string | null {
   try {
     const m = JSON.parse(jsonStr) as { c?: unknown; a?: unknown; i?: Array<Record<string, unknown>> }
@@ -146,15 +129,4 @@ export function encodeAtaToHash(ata: MeetingMinutes | MeetingMinutesStorage): st
   const payload = toStorage(ata)
   const json = JSON.stringify(payload)
   return PREFIX_COMPRESSED + LZString.compressToBase64(json)
-}
-
-/**
- * Codifica ata em formato mínimo para QR code (limite ~2.9KB).
- * Usa chaves curtas e só UltimoHistorico por item.
- */
-export function encodeAtaToHashForQr(ata: MeetingMinutes | MeetingMinutesStorage): string {
-  const payload = toStorage(ata)
-  const minimal = toMinimalPayload(payload)
-  const json = JSON.stringify(minimal)
-  return PREFIX_MINIMAL + LZString.compressToBase64(json)
 }

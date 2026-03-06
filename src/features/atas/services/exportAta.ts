@@ -7,7 +7,7 @@
  */
 import type { MeetingMinutes, Item, HistoricoItem } from '@/types'
 import { sortItemsByNumber } from '@/utils/itemNumbering'
-import { sanitizeHtml } from '@/utils/htmlSanitize'
+import { sanitizeHtml, stripHtml } from '@/utils/htmlSanitize'
 import { encodeAtaToHash } from '@/utils/urlAtaImport'
 import { getEnvConfig } from '@services/envConfig'
 import { getAtaFilterScript } from './ataFilterScript'
@@ -125,10 +125,6 @@ function normalizeForFilter(s: string): string {
     .replace(/[\u0300-\u036f]/g, '')
 }
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-}
-
 /**
  * Gera o bloco de cabeçalho da ata (para repetir em cada página).
  * @param logoDataUrl - Opcional: data URL da logomarca para o canto superior esquerdo
@@ -153,14 +149,14 @@ function buildHeaderBlock(c: MeetingMinutes['cabecalho'], pagina: number, total:
   )
 }
 
-export interface BuildAtaHtmlOptions {
+interface BuildAtaHtmlOptions {
   /** URL base do aplicativo para o link "Abrir no app". Ex: https://wellbrez.github.io/GeradorDeAtas */
   appBaseUrl?: string
   /** Data URL da logomarca (ex.: data:image/png;base64,...) para exibir no canto superior esquerdo do cabeçalho */
   logoDataUrl?: string | null
 }
 
-export function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions): string {
+function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions): string {
   const c = ata.cabecalho
   const logoDataUrl = options?.logoDataUrl ?? null
   const itensOrd = sortItemsByNumber(ata.itens)
@@ -302,7 +298,7 @@ export function parseAtaFromHtml(html: string): MeetingMinutes | null {
   }
 }
 
-export function downloadBlob(blob: Blob, filename: string): void {
+function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
