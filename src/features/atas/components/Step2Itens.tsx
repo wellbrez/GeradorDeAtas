@@ -1,25 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Button, ConfirmModal } from '@components/ui'
 import type { Item, ItemStatus, HistoricoItem, Participant } from '@/types'
+import { formatDateOnlyAsYmdLocal, parseDateOnlyAsLocal } from '@/utils/dateOnlyLocal'
 import { sanitizeHtml, stripHtml } from '@/utils/htmlSanitize'
 import RichTextDescricao from './RichTextDescricao'
 import ResponsavelSelect from './ResponsavelSelect'
 import styles from './Step2Itens.module.css'
 
 const STATUS_TO_HIDE = ['Concluído', 'Cancelado', 'Info'] as const
-
-/**
- * Interpreta string de data como dia local (evita deslocamento de timezone).
- * Strings "YYYY-MM-DD" sem hora são interpretadas como UTC pelo Date(), o que em fusos
- * como Brasil (UTC-3) faz a data aparecer como dia anterior. Usar T12:00:00 força o dia correto.
- */
-function parseDateOnlyAsLocal(s: string): Date {
-  const trimmed = (s || '').trim()
-  if (trimmed.length === 10 && trimmed[4] === '-' && trimmed[7] === '-') {
-    return new Date(trimmed + 'T12:00:00')
-  }
-  return new Date(s)
-}
 
 function formatDate(s: string | null): string {
   if (!s) return '-'
@@ -68,18 +56,7 @@ export interface Step2ItensProps {
 
 /** Formata data para exibição no texto (yyyy-mm-dd) em dia local. */
 function formatDateYmd(s: string | null): string {
-  if (!s) return ''
-  try {
-    const trimmed = s.trim()
-    if (trimmed.length === 10 && trimmed[4] === '-' && trimmed[7] === '-') return trimmed
-    const d = parseDateOnlyAsLocal(s)
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
-  } catch {
-    return s
-  }
+  return formatDateOnlyAsYmdLocal(s)
 }
 
 /** Indica se o histórico pode ser excluído: mesmo dia ou dia seguinte à data de criação. */
