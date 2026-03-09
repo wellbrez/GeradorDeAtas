@@ -156,7 +156,8 @@ interface BuildAtaHtmlOptions {
   logoDataUrl?: string | null
 }
 
-function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions): string {
+/** Gera o HTML completo da ata para exportação e impressão. */
+export function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions): string {
   const c = ata.cabecalho
   const logoDataUrl = options?.logoDataUrl ?? null
   const itensOrd = sortItemsByNumber(ata.itens)
