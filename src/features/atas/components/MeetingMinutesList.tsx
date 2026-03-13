@@ -35,6 +35,16 @@ export interface MeetingMinutesListProps {
   onCopy?: (id: string) => void
 }
 
+/**
+ * Interpreta string de data (YYYY-MM-DD ou ISO) como dia local, evitando deslocamento por timezone.
+ * Strings "YYYY-MM-DD" são tratadas como meio-dia local para não cair no dia anterior em fusos como UTC-3.
+ */
+function parseDateOnlyAsLocal(s: string): Date {
+  const t = (s || '').trim()
+  if (t.length === 10 && t[4] === '-' && t[7] === '-') return new Date(t + 'T12:00:00')
+  return new Date(s)
+}
+
 function parseJsonToStorage(json: unknown): MeetingMinutesStorage | null {
   if (!json || typeof json !== 'object') return null
   const o = json as Record<string, unknown>
@@ -63,7 +73,7 @@ function filterAtas(
 
     if (filters.tipo && ata.cabecalho.tipo !== filters.tipo) return false
 
-    const dataAta = ata.cabecalho.data ? new Date(ata.cabecalho.data) : null
+    const dataAta = ata.cabecalho.data ? parseDateOnlyAsLocal(ata.cabecalho.data) : null
     if (filters.dataInicio && dataAta) {
       const inicio = new Date(filters.dataInicio)
       inicio.setHours(0, 0, 0, 0)
@@ -80,12 +90,13 @@ function filterAtas(
       const numero = (ata.cabecalho.numero || '').toLowerCase()
       const titulo = (ata.cabecalho.titulo || '').toLowerCase()
       const projeto = (ata.cabecalho.projeto || '').toLowerCase()
+      const contrato = (ata.cabecalho.contrato || '').toLowerCase()
       const responsavel = (ata.cabecalho.responsavel || '').toLowerCase()
       const participantes = ata.attendance
         .map((p) => (p.nome || '') + ' ' + (p.email || ''))
         .join(' ')
         .toLowerCase()
-      const searchable = [numero, titulo, projeto, responsavel, participantes].join(' ')
+      const searchable = [numero, titulo, projeto, contrato, responsavel, participantes].join(' ')
       if (!searchable.includes(q)) return false
     }
 

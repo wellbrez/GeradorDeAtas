@@ -42,6 +42,8 @@ export interface MeetingMinutesFormProps {
   onSaved: () => void
   /** Quando false, não concede Selos nem exibe celebração/barra de completude */
   gamificationEnabled?: boolean
+  /** Storage inicial vindo de hash da URL (importação via link). Não cria ata automaticamente. */
+  initialStorageFromHash?: MeetingMinutesStorage | null
 }
 
 /**
@@ -278,6 +280,7 @@ export default function MeetingMinutesForm({
   isCopy,
   onSaved,
   gamificationEnabled = true,
+  initialStorageFromHash = null,
 }: MeetingMinutesFormProps) {
   const [currentStep, setCurrentStep] = useState(1)
   const [showRestoreModal, setShowRestoreModal] = useState(false)
@@ -309,7 +312,10 @@ export default function MeetingMinutesForm({
 
   const formKey = draftToApply
     ? `draft-${draftToApply.savedAt}`
-    : existingAta?.id ?? 'new'
+    : existingAta?.id ?? (initialStorageFromHash ? 'from-hash' : 'new')
+
+  const initialDraftStorage: MeetingMinutesStorage | null =
+    draftToApply?.storage ?? initialStorageFromHash ?? null
 
   return (
     <div className={styles.fullPage}>
@@ -337,7 +343,7 @@ export default function MeetingMinutesForm({
         key={formKey}
         existingAta={existingAta}
         isCopy={isCopy}
-        initialDraft={draftToApply?.storage ?? null}
+        initialDraft={initialDraftStorage}
         currentStep={currentStep}
         setCurrentStep={setCurrentStep}
         onClose={onClose}

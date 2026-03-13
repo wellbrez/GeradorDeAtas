@@ -67,6 +67,8 @@ export interface Cabecalho {
   titulo: string
   responsavel: string
   projeto: string
+  /** Identificador opcional do contrato relacionado à ata */
+  contrato?: string
 }
 
 /**

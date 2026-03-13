@@ -25,6 +25,7 @@ const defaultCabecalho = (): Cabecalho => ({
   titulo: '',
   responsavel: '',
   projeto: '',
+  contrato: '',
 })
 
 function createHistoricoVazio(): HistoricoItem {

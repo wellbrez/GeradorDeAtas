@@ -161,6 +161,13 @@ export default function Step1CabecalhoParticipantes({
                 ))}
               </datalist>
             </div>
+          <Input
+            label="Contrato"
+            value={cabecalho.contrato ?? ''}
+            onChange={(e) => onCabecalhoChange({ contrato: e.target.value })}
+            onBlur={() => tryAwardForField('contrato', cabecalho.contrato)}
+            placeholder="Identificador do contrato (opcional)"
+          />
             <Input
               label="Responsável"
               value={cabecalho.responsavel}

@@ -1,10 +1,12 @@
 /**
  * Sanitiza HTML para exibição segura (descrição rich text).
- * Permite: b, i, u, br, p, span, font. Em span preserva style com color/background-color; font color vira span com style.
+ * Permite: b, i, u, br, p, span, font, img.
+ * - Em span preserva style com color/background-color; font color vira span com style.
+ * - Em img permite apenas src data:image/* base64 (já redimensionado no editor) e alt simples.
  * Tags de bloco não permitidas (ex.: div que o Chrome insere ao pressionar Enter) são convertidas em conteúdo + <br/>
  * para preservar as quebras de linha na visualização.
  */
-const ALLOWED_TAGS = ['b', 'i', 'u', 'br', 'p', 'span', 'font']
+const ALLOWED_TAGS = ['b', 'i', 'u', 'br', 'p', 'span', 'font', 'img']
 
 /** Tags de bloco que, quando não permitidas, devem gerar quebra de linha antes e depois do conteúdo (ex.: div no Chrome). */
 const BLOCK_TAGS_AS_BR = ['div']
@@ -58,6 +60,22 @@ export function sanitizeHtml(html: string): string {
       if (BLOCK_TAGS_AS_BR.includes(tag)) return '<br/>' + inner + '<br/>'
       return inner
     }
+
+    // Imagens: apenas data URLs pequenos e sem atributos perigosos
+    if (tag === 'img') {
+      const rawSrc = el.getAttribute('src') || ''
+      const src = (rawSrc || '').trim()
+      const dataUrlMatch = /^data:image\/(png|jpe?g|gif|webp);base64,[a-z0-9+/=]+$/i.test(src)
+      // limite de tamanho aproximado: ~60 KB em base64 => ~80k caracteres
+      const MAX_DATAURL_LENGTH = 80_000
+      if (!dataUrlMatch || src.length > MAX_DATAURL_LENGTH) {
+        return ''
+      }
+      const altRaw = (el.getAttribute('alt') || '').replace(/[\r\n"]/g, ' ').slice(0, 200)
+      const altAttr = altRaw ? ` alt="${altRaw}"` : ''
+      return `<img src="${src}"${altAttr} />`
+    }
+
     const inner = Array.from(node.childNodes).map(walk).join('')
     if (tag === 'br') return '<br/>'
     let styleAttr = ''

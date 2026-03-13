@@ -18,9 +18,19 @@ export interface MeetingMinutesListByProjectProps {
   onAwardSelos?: (baseAmount: number, position?: { clientX: number; clientY: number }) => void
 }
 
+/**
+ * Interpreta string de data (YYYY-MM-DD ou ISO) como dia local, evitando deslocamento por timezone.
+ * Strings "YYYY-MM-DD" são tratadas como meio-dia local para não cair no dia anterior em fusos como UTC-3.
+ */
+function parseDateOnlyAsLocal(s: string): Date {
+  const t = (s || '').trim()
+  if (t.length === 10 && t[4] === '-' && t[7] === '-') return new Date(t + 'T12:00:00')
+  return new Date(s)
+}
+
 function formatDate(dateString: string): string {
   try {
-    return new Date(dateString).toLocaleDateString('pt-BR')
+    return parseDateOnlyAsLocal(dateString).toLocaleDateString('pt-BR')
   } catch {
     return dateString
   }
@@ -29,7 +39,8 @@ function formatDate(dateString: string): string {
 function canEdit(ata: MeetingMinutes): boolean {
   if (ata.arquivada) return false
   try {
-    const dataAta = new Date(ata.cabecalho.data)
+    const dataAta = parseDateOnlyAsLocal(ata.cabecalho.data)
+    dataAta.setHours(0, 0, 0, 0)
     const hoje = new Date()
     hoje.setHours(0, 0, 0, 0)
     const umDiaAtras = new Date(hoje)
@@ -175,6 +186,9 @@ function MeetingMinutesRowCompact({
           </span>
           <span className={styles.rowMeta}>
             {meetingMinutes.cabecalho.tipo} · {formatDate(meetingMinutes.cabecalho.data)}
+            {meetingMinutes.cabecalho.contrato
+              ? ` · Contrato: ${meetingMinutes.cabecalho.contrato}`
+              : ''}
           </span>
           {meetingMinutes.arquivada && (
             <span className={styles.badgeArquivada}>Arquivada</span>

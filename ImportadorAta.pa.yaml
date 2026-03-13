@@ -1,0 +1,735 @@
+Screens:
+  ImportadorAtas:
+    Properties:
+      Fill: =RGBA(255, 255, 255, 1)
+      LoadingSpinnerColor: =RGBA(0, 120, 212, 1)
+    Children:
+      - ContainerImportadorAta:
+          Control: GroupContainer@1.4.0
+          Variant: AutoLayout
+          Properties:
+            Height: =Parent.Height
+            LayoutDirection: =LayoutDirection.Vertical
+            PaddingBottom: =20
+            PaddingLeft: =20
+            PaddingRight: =20
+            PaddingTop: =20
+            Width: =Parent.Width
+          Children:
+            - lblTitulo:
+                Control: Label@2.5.1
+                Properties:
+                  AlignInContainer: =AlignInContainer.Stretch
+                  FontWeight: =FontWeight.Bold
+                  LayoutMaxHeight: =
+                  LayoutMaxWidth: =
+                  Size: =24
+                  Text: ="Importador de Atas"
+            - lblInstrucoes:
+                Control: Label@2.5.1
+                Properties:
+                  AlignInContainer: =AlignInContainer.Stretch
+                  AutoHeight: =true
+                  LayoutMaxHeight: =
+                  LayoutMaxWidth: =
+                  Size: =12
+                  Text: ="Cole o JSON da ata gerada pelo aplicativo no campo abaixo e clique em 'Importar Ata'"
+            - txtJSONAta:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  AlignInContainer: =AlignInContainer.Stretch
+                  Default: =varJSONImportado
+                  Height: =300
+                  HintText: ="Cole aqui o JSON da ata..."
+                  LayoutMaxHeight: =
+                  LayoutMaxWidth: =
+                  Mode: =TextMode.MultiLine
+            - btnImportarAta:
+                Control: Button@0.0.45
+                Properties:
+                  AlignInContainer: =AlignInContainer.Center
+                  DisplayMode: =If(!IsBlank(txtJSONAta.Text), DisplayMode.Edit, DisplayMode.Disabled)
+                  Height: =50
+                  LayoutMaxHeight: =
+                  LayoutMaxWidth: =
+                  OnSelect: |-
+                    =Set(varJSONImportado, txtJSONAta.Text);
+                    IfError(
+                        Set(varParsedAta, ParseJSON(varJSONImportado));
+                        If(
+                            IsBlank(varParsedAta.cabecalho) || 
+                            IsBlank(varParsedAta.attendance) || 
+                            IsBlank(varParsedAta.itens),
+                            Notify("JSON inválido: estrutura incompleta. Deve conter cabecalho, attendance e itens.", NotificationType.Error),
+                            With(
+                                {
+                                    cabecalhoParsed: varParsedAta.cabecalho,
+                                    attendanceParsed: Table(varParsedAta.attendance),
+                                    itensParsed: Table(varParsedAta.itens)
+                                },
+                                ClearCollect(colAttendance, 
+                                    ForAll(attendanceParsed As att,
+                                        {
+                                            nome: Coalesce(Text(att.Value.nome), ""),
+                                            email: Coalesce(Text(att.Value.email), ""),
+                                            empresa: Coalesce(Text(att.Value.empresa), ""),
+                                            telefone: Coalesce(Text(att.Value.telefone), ""),
+                                            presenca: Coalesce(Text(att.Value.presenca), "P")
+                                        }
+                                    )
+                                );
+                                ClearCollect(colItens,
+                                    ForAll(itensParsed As itm,
+                                        With(
+                                            {
+                                                filhosTabela: If(
+                                                    IsBlank(itm.Value.filhos),
+                                                    [],
+                                                    ForAll(Table(itm.Value.filhos) As filho, {Value: IfError(Text(filho.Value), "")})
+                                                ),
+                                                historicoTabela: If(
+                                                    IsBlank(Table(itm.Value.historico)),
+                                                    blankHistTable,
+                                                    ForAll(Table(itm.Value.historico) As hist,
+                                                        {
+                                                            id: Coalesce(Text(hist.Value.id), ""),
+                                                            criadoEm: IfError(DateTimeValue(Text(hist.Value.criadoEm)), Now()),
+                                                            descricao: Coalesce(Text(hist.Value.descricao), ""),
+                                                            responsavelEmail: Coalesce(Text(hist.Value.responsavel.email), ""),
+                                                            responsavelNome: Coalesce(Text(hist.Value.responsavel.nome), ""),
+                                                            data: If(IsBlank(hist.Value.data), Blank(), IfError(DateValue(Text(hist.Value.data)), Blank())),
+                                                            status: Coalesce(Text(hist.Value.status), "Pendente")
+                                                        }
+                                                    )
+                                                ),
+                                                ultimoHistoricoObj: If(
+                                                    IsBlank(itm.Value.UltimoHistorico),
+                                                    {
+                                                        id: "",
+                                                        criadoEm: Now(),
+                                                        descricao: "",
+                                                        responsavelEmail: "",
+                                                        responsavelNome: "",
+                                                        data: Blank(),
+                                                        status: "Pendente"
+                                                    },
+                                                    {
+                                                        id: Coalesce(Text(itm.Value.UltimoHistorico.id), ""),
+                                                        criadoEm: IfError(DateTimeValue(Text(itm.Value.UltimoHistorico.criadoEm)), Now()),
+                                                        descricao: Coalesce(Text(itm.Value.UltimoHistorico.descricao), ""),
+                                                        responsavelEmail: Coalesce(Text(itm.Value.UltimoHistorico.responsavel.email), ""),
+                                                        responsavelNome: Coalesce(Text(itm.Value.UltimoHistorico.responsavel.nome), ""),
+                                                        data: If(IsBlank(itm.Value.UltimoHistorico.data), Blank(), IfError(DateValue(Text(itm.Value.UltimoHistorico.data)), Blank())),
+                                                        status: Coalesce(Text(itm.Value.UltimoHistorico.status), "Pendente")
+                                                    }
+                                                )
+                                            },
+                                            {
+                                                id: Coalesce(Text(itm.Value.id), ""),
+                                                item: Coalesce(Text(itm.Value.item), ""),
+                                                nivel: IfError(Value(itm.Value.nivel), 1),
+                                                pai: If(IsBlank(itm.Value.pai), Blank(), Text(itm.Value.pai)),
+                                                filhos: filhosTabela,
+                                                criadoEm: IfError(DateTimeValue(Text(itm.Value.criadoEm)), Now()),
+                                                historico: historicoTabela,
+                                                UltimoHistorico: ultimoHistoricoObj
+                                            }
+                                        )
+                                    )
+                                );
+                                ClearCollect(
+                                    colResponsaveisPendentesTemp,
+                                    Filter(colItens As coli,
+                                        !IsBlank(coli.UltimoHistorico) &&
+                                        coli.UltimoHistorico.responsavelEmail <> "" &&
+                                        coli.UltimoHistorico.responsavelEmail <> Blank() &&
+                                        With(
+                                            {statusNormalizado: Lower(Substitute(coli.UltimoHistorico.status, "í", "i"))},
+                                            statusNormalizado <> "cancelado" && 
+                                            statusNormalizado <> "concluido" && 
+                                            statusNormalizado <> "info"
+                                        )
+                                    )
+                                );
+                                ClearCollect(
+                                    colResponsaveisPendentes,
+                                    ForAll(
+                                        Distinct(colResponsaveisPendentesTemp, UltimoHistorico.responsavelEmail) As distinctEmail,
+                                        With(
+                                            {
+                                                emailResponsavel: distinctEmail.Value,
+                                                responsavelTemp: First(Filter(colResponsaveisPendentesTemp, UltimoHistorico.responsavelEmail = distinctEmail.Value)),
+                                                participante: LookUp(colAttendance, email = distinctEmail.Value)
+                                            },
+                                            {
+                                                nome: If(IsBlank(participante.nome), responsavelTemp.UltimoHistorico.responsavelNome, participante.nome),
+                                                email: emailResponsavel,
+                                                Selecionado: false
+                                            }
+                                        )
+                                    )
+                                );
+                                Set(ataCabecalho, {
+                                    numero: Coalesce(Text(cabecalhoParsed.numero), ""),
+                                    data: IfError(DateValue(Text(cabecalhoParsed.data)), Today()),
+                                    tipo: Coalesce(Text(cabecalhoParsed.tipo), ""),
+                                    titulo: Coalesce(Text(cabecalhoParsed.titulo), ""),
+                                    responsavel: Coalesce(Text(cabecalhoParsed.responsavel), ""),
+                                    projeto: Coalesce(Text(cabecalhoParsed.projeto), "")
+                                });
+                                Set(ataImportada, true);
+                                Notify("Ata importada com sucesso!", NotificationType.Success)
+                            )
+                        );
+                        Set(varParsedAta, Blank())
+                        ,
+                        Notify("Erro ao processar JSON. Verifique se o formato está correto.", NotificationType.Error)
+                    )
+                  Text: ="Importar Ata"
+                  Width: =200
+            - ContainerAcoes:
+                Control: GroupContainer@1.4.0
+                Variant: AutoLayout
+                Properties:
+                  LayoutDirection: =LayoutDirection.Horizontal
+                  LayoutGap: =10
+                  LayoutMaxHeight: =
+                  LayoutMaxWidth: =
+                  PaddingTop: =20
+                  Visible: =ataImportada
+                Children:
+                  - btnSalvarAta:
+                      Control: Button@0.0.45
+                      Properties:
+                        AlignInContainer: =AlignInContainer.Center
+                        Height: =50
+                        LayoutMaxHeight: =
+                        LayoutMaxWidth: =
+                        OnSelect: |-
+                          =IfError(
+                              Patch(LS_ATASREUNIAO, Defaults(LS_ATASREUNIAO), {
+                                  txtJSON: varJSONImportado,
+                                  opTIPO: {Value: ataCabecalho.tipo},
+                                  dtDATA: ataCabecalho.data,
+                                  txtNUMERO: ataCabecalho.numero
+                              });
+                              Notify("Ata salva com sucesso!", NotificationType.Success);
+                              Refresh(LS_ATASREUNIAO)
+                              ,
+                              Notify("Erro ao salvar a ata. Verifique se a lista LS_ATASREUNIAO está configurada.", NotificationType.Error)
+                          )
+                        Text: ="Salvar Ata"
+                        Width: =150
+                  - btnEnviarEmailTodos:
+                      Control: Button@0.0.45
+                      Properties:
+                        AlignInContainer: =AlignInContainer.Center
+                        Height: =50
+                        LayoutMaxHeight: =
+                        LayoutMaxWidth: =
+                        OnSelect: |-
+                          =Set(showModalEmailAta, true);
+                          Set(showPreviewEmail, false);
+                          Set(ataAtual, {txtJSON: varJSONImportado});
+                          Set(varParsedAtaEmail, ParseJSON(varJSONImportado));
+                          Set(gbl_ModalEmail, true);
+                          Set(var_EtapaEmail, 1)
+                        Text: ="Enviar Email para Todos"
+                        Width: =200
+                  - btnEnviarEmailPendentes:
+                      Control: Button@0.0.45
+                      Properties:
+                        AlignInContainer: =AlignInContainer.Center
+                        Height: =50
+                        LayoutMaxHeight: =
+                        LayoutMaxWidth: =
+                        OnSelect: |-
+                          =Set(showModalEmailAta, true);
+                          Set(showPreviewEmail, false);
+                          Set(ataAtual, {txtJSON: varJSONImportado});
+                          Set(varParsedAta, ParseJSON(varJSONImportado));
+                          Set(var_EtapaEmail, 2)
+                        Text: ="Enviar Email para Pendentes"
+                        Width: =220
+      - ModalEmailAta:
+          Control: GroupContainer@1.4.0
+          Variant: AutoLayout
+          Properties:
+            Fill: =RGBA(0, 0, 0, 0.5)
+            Height: =Parent.Height
+            LayoutDirection: =LayoutDirection.Vertical
+            PaddingBottom: =2
+            PaddingTop: =5
+            Visible: =showModalEmailAta
+            Width: =Parent.Width
+          Children:
+            - ContainerModalEmail:
+                Control: GroupContainer@1.4.0
+                Variant: AutoLayout
+                Properties:
+                  AlignInContainer: =AlignInContainer.Center
+                  DropShadow: =DropShadow.ExtraBold
+                  Fill: =RGBA(255, 255, 255, 1)
+                  LayoutAlignItems: =LayoutAlignItems.Stretch
+                  LayoutDirection: =LayoutDirection.Vertical
+                  LayoutMaxHeight: =
+                  LayoutMaxWidth: =
+                  RadiusBottomLeft: =10
+                  RadiusBottomRight: =10
+                  RadiusTopLeft: =10
+                  RadiusTopRight: =10
+                  Width: =Min(Parent.Width - 40, 1200)
+                Children:
+                  - ContainerCabecalhoEmail:
+                      Control: GroupContainer@1.4.0
+                      Variant: AutoLayout
+                      Properties:
+                        Fill: =RGBA(0, 120, 212, 1)
+                        FillPortions: =0
+                        Height: =40
+                        LayoutDirection: =LayoutDirection.Horizontal
+                        LayoutGap: =10
+                        LayoutMaxHeight: =
+                        LayoutMaxWidth: =
+                        PaddingLeft: =20
+                        PaddingRight: =20
+                        PaddingTop: =10
+                      Children:
+                        - lblTituloModalEmail:
+                            Control: Label@2.5.1
+                            Properties:
+                              FillPortions: =1
+                              FontWeight: =FontWeight.Bold
+                              LayoutMaxHeight: =
+                              LayoutMaxWidth: =
+                              Size: =18
+                              Text: =If(var_EtapaEmail = 1, "Enviar Ata Completa", "Enviar Ações Pendentes")
+                        - btnFecharModalEmail:
+                            Control: Button@0.0.45
+                            Properties:
+                              Height: =30
+                              Icon: =Icon.Cancel
+                              LayoutMaxHeight: =
+                              LayoutMaxWidth: =
+                              OnSelect: =Set(showModalEmailAta, false);Set(showPreviewEmail, false)
+                              Width: =30
+                  - ContainerConteudoEmail:
+                      Control: GroupContainer@1.4.0
+                      Variant: AutoLayout
+                      Properties:
+                        LayoutDirection: =LayoutDirection.Vertical
+                        LayoutGap: =15
+                        LayoutMaxHeight: =
+                        LayoutMaxWidth: =
+                        PaddingBottom: =20
+                        PaddingLeft: =20
+                        PaddingRight: =20
+                        PaddingTop: =20
+                      Children:
+                        - ContainerEmailCompleto:
+                            Control: GroupContainer@1.4.0
+                            Variant: AutoLayout
+                            Properties:
+                              LayoutDirection: =LayoutDirection.Vertical
+                              LayoutGap: =10
+                              LayoutMaxHeight: =
+                              LayoutMaxWidth: =
+                              Visible: =var_EtapaEmail = 1
+                            Children:
+                              - lblDestinatarios:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    AlignInContainer: =AlignInContainer.Stretch
+                                    LayoutMaxHeight: =
+                                    LayoutMaxWidth: =
+                                    Size: =14
+                                    Text: ="Destinatários:"
+                              - txtDestinatarios:
+                                  Control: Classic/TextInput@2.3.2
+                                  Properties:
+                                    AlignInContainer: =AlignInContainer.Stretch
+                                    Default: =Concat(Filter(colAttendance As att, !IsBlank(att.email))As att2, att2.email & ";")
+                                    LayoutMaxHeight: =
+                                    LayoutMaxWidth: =
+                                    Mode: =TextMode.MultiLine
+                              - lblAssunto:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    AlignInContainer: =AlignInContainer.Stretch
+                                    LayoutMaxHeight: =
+                                    LayoutMaxWidth: =
+                                    Size: =14
+                                    Text: ="Assunto:"
+                              - txtAssunto:
+                                  Control: Classic/TextInput@2.3.2
+                                  Properties:
+                                    AlignInContainer: =AlignInContainer.Stretch
+                                    Default: =ataCabecalho.numero & " - Ata de Reunião - " & ataCabecalho.tipo & " [" & Text(ataCabecalho.data, "dd/mm/yyyy") & "]"
+                                    LayoutMaxHeight: =
+                                    LayoutMaxWidth: =
+                              - lblMensagem:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    AlignInContainer: =AlignInContainer.Stretch
+                                    LayoutMaxHeight: =
+                                    LayoutMaxWidth: =
+                                    Size: =14
+                                    Text: ="Mensagem Adicional:"
+                              - txtMensagem:
+                                  Control: Classic/TextInput@2.3.2
+                                  Properties:
+                                    AlignInContainer: =AlignInContainer.Stretch
+                                    Default: ="Boa tarde!<br>Segue em anexo a ata " & gbl_Email_Assunto & ", com os tópicos conforme discutidos em reunião."
+                                    Height: =100
+                                    LayoutMaxHeight: =
+                                    LayoutMaxWidth: =
+                                    Mode: =TextMode.MultiLine
+                              - btnGerarPreviewEmail:
+                                  Control: Button@0.0.45
+                                  Properties:
+                                    AlignInContainer: =AlignInContainer.Center
+                                    Height: =50
+                                    LayoutMaxHeight: =
+                                    LayoutMaxWidth: =
+                                    OnSelect: |-
+                                      =Set(LogoVale,JSON('logo vale',JSONFormat.IncludeBinaryData));
+                                      Set(varParsedAtaEmail, ParseJSON(varJSONImportado));
+                                      Set(
+                                        varCabecalhoEmail,
+                                        With(
+                                          {
+                                            cab: varParsedAtaEmail.cabecalho,
+                                            dataTexto: Text(varParsedAtaEmail.cabecalho.data)
+                                          },
+                                          {
+                                            numero: Text(cab.numero),
+                                            data: If(
+                                              IsBlank(dataTexto),
+                                              Coalesce(ataCabecalho.data, Today()),
+                                              IfError(DateValue(dataTexto), Coalesce(ataCabecalho.data, Today()))
+                                            ),
+                                            tipo: Text(cab.tipo),
+                                            titulo: Text(cab.titulo),
+                                            responsavel: Coalesce(Text(cab.responsavel), ""),
+                                            projeto: Coalesce(Text(cab.projeto), "")
+                                          }
+                                        )
+                                      );
+                                      Set(var_TblAttendance, Table(varParsedAtaEmail.attendance));
+                                      Set(var_TblItens, 
+                                          SortByColumns(
+                                              AddColumns(
+                                                  Table(varParsedAtaEmail.itens),
+                                                  ChaveOrdenacao, Concat(Split(Text(Value.item), "."), Text(Value(Value), "0000000000"))
+                                              ),
+                                              "ChaveOrdenacao", SortOrder.Ascending
+                                          )
+                                      );
+                                      Set(gbl_Email_Destinatarios, If(IsBlank(txtDestinatarios.Text), Concat(Filter(var_TblAttendance As att, !IsBlank(Text(att.Value.email))) As tt, Text(tt.Value.email) & ";"), txtDestinatarios.Text));
+                                      Set(gbl_Email_Assunto, If(IsBlank(txtAssunto.Text), varCabecalhoEmail.numero & " - Ata de Reunião - " & varCabecalhoEmail.tipo & " [" & Text(varCabecalhoEmail.data, "dd/mm/yyyy") & "]", txtAssunto.Text));
+                                      Set(gbl_Email_MensagemAdicional, If(IsBlank(txtMensagem.Text), "Boa tarde!<br>Segue em anexo a ata " & gbl_Email_Assunto & ", com os tópicos conforme discutidos em reunião.", txtMensagem.Text));
+                                      Set(var_PageLimit, 2800);
+                                      Set(var_ItemBaseHeight, 100);
+                                      Set(var_CharWeight, 1.2);
+                                      ClearCollect(col_ItensComTamanho,
+                                          ForAll(var_TblItens As itm,
+                                              With({
+                                                  txtFull: Concat(Table(itm.Value.historico), Value.descricao) & Text(itm.Value.item) & Text(itm.Value.UltimoHistorico.responsavel.nome),
+                                                  temFilhos: CountRows(Table(itm.Value.filhos)) > 0
+                                              },
+                                              {
+                                                  ItemOriginal: itm,
+                                                  AlturaEstimada: var_ItemBaseHeight + (Len(txtFull) * var_CharWeight) + If(temFilhos, 50, 0)
+                                              })
+                                          )
+                                      );
+                                      Clear(col_ItensPaginados);
+                                      ForAll(col_ItensComTamanho As itemAtual,
+                                          With(
+                                              {
+                                                  registroAnterior: Last(col_ItensPaginados),
+                                                  paginaInicial: 2
+                                              },
+                                              With(
+                                                  {
+                                                      alturaAcumuladaAnterior: If(IsBlank(registroAnterior), 0, registroAnterior.AlturaAcumulada),
+                                                      paginaAnterior: If(IsBlank(registroAnterior), paginaInicial, registroAnterior.Pagina)
+                                                  },
+                                                  If(
+                                                      (alturaAcumuladaAnterior + itemAtual.AlturaEstimada) > var_PageLimit,
+                                                      Collect(col_ItensPaginados, {
+                                                          ItemData: itemAtual.ItemOriginal,
+                                                          Pagina: paginaAnterior + 1,
+                                                          AlturaAcumulada: itemAtual.AlturaEstimada
+                                                      }),
+                                                      Collect(col_ItensPaginados, {
+                                                          ItemData: itemAtual.ItemOriginal,
+                                                          Pagina: paginaAnterior,
+                                                          AlturaAcumulada: alturaAcumuladaAnterior + itemAtual.AlturaEstimada
+                                                      })
+                                                  )
+                                              )
+                                          )
+                                      );
+                                      Set(var_TotalPaginas, Max(col_ItensPaginados, Pagina));
+                                      If(IsBlank(var_TotalPaginas) || var_TotalPaginas < 1, Set(var_TotalPaginas, 1));
+                                      With(
+                                        {
+                                          estiloBody: "margin:0;padding:0;background-color:#f5f5f5;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;box-sizing: border-box;",
+                                          estiloContainer: "box-sizing:border-box;width:calc(100% - 2px);min-height:100vh;margin:0 auto;padding:12mm 8mm 15mm 8mm;background:#ffffff;border:none;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;",
+                                          estiloLayoutTable: "width:100%;border-collapse:collapse;border:2px solid #000000;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;",
+                                          estiloLayoutCelula: "border:1px solid #d8d8d8;padding:0;vertical-align:top;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;",
+                                          estiloCabecalhoPrincipal: "border:1px solid #000000;border-collapse:collapse;width:100%;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;",
+                                          estiloCabecalhoPrincipalCelulaCentro: "border:1px solid #000000;padding:5px;vertical-align:top;text-align:center;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;",
+                                          estiloCabecalhoPrincipalCelulaEsquerda: "border:1px solid #000000;padding:5px;vertical-align:top;text-align:left;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;",
+                                          estiloCabecalhoPrincipalCelulaSemBorda: "padding:0;border:0 solid transparent;vertical-align:top;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;",
+                                          estiloTabelaPadrao: "border-collapse:collapse;width:100%;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;",
+                                          estiloTabelaParticipantes: "border-collapse:collapse;width:100%;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;",
+                                          estiloTabelaItens: "border-collapse:collapse;width:100%;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;",
+                                          estiloLinhaNoBreak: "page-break-inside:avoid;break-inside:avoid;",
+                                          estiloResposta: "border:1px solid #d8d8d8;color:#000000;background-color:transparent;padding:3px;word-break:break-word;vertical-align:top;text-align:left;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;",
+                                          estiloCabecalhoTexto: "border:1px solid #d8d8d8;color:#000000;background-color:#cccccc;text-align:left;padding:3px;font-weight:bold;word-break:break-word;vertical-align:top;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;",
+                                          estiloSecao: "color:#ffffff;background-color:#007e7a;text-align:center;padding:4px;font-size:11pt;font-weight:bold;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;",
+                                          estiloLegenda: "font-size:9pt;margin:6px 0 10px 0;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;",
+                                          estiloMioloBloco: "width:100%;margin:0 auto;margin-top:16px;",
+                                          tituloFormatado: Substitute(Substitute(Coalesce(varCabecalhoEmail.titulo, ""), Char(13), ""), Char(10), "<br>"),
+                                          projetoFormatado: Substitute(Substitute(Coalesce(varCabecalhoEmail.projeto, ""), Char(13), ""), Char(10), "<br>"),
+                                          estiloQuebraPagina: "page-break-after:always;display:block;clear:both;"
+                                        },
+                                        Set(var_HTML_Pagina1,
+                                          "<div style=''" & estiloContainer & estiloQuebraPagina & "''><table style=''" & estiloLayoutTable & "'' cellpadding='5' cellspacing='0'><thead><tr style=''" & estiloLinhaNoBreak & "''><td style=''" & estiloLayoutCelula & "''><table style=''" & estiloCabecalhoPrincipal & "'' cellpadding='5' cellspacing='0'><tr style=''" & estiloLinhaNoBreak & "''><td width='20%' style=''" & estiloCabecalhoPrincipalCelulaCentro & "''><img src='" & LogoVale & "' alt='' width='90%'></td><td width='20%' style=''" & estiloCabecalhoPrincipalCelulaCentro & "''><img src='' alt='' width='90%'></td><td width='20%' style=''" & estiloCabecalhoPrincipalCelulaCentro & "''>Classificação<br>USO RESTRITO<strong></strong></td><td colspan='2' width='60%' style=''" & estiloCabecalhoPrincipalCelulaEsquerda & "''>" &
+                                          projetoFormatado &
+                                          "</td></tr><tr style=''" & estiloLinhaNoBreak & "''><td colspan='3' style=''" & estiloCabecalhoPrincipalCelulaEsquerda & "''><strong>"&tituloFormatado&"</strong></td><td style=''" & estiloCabecalhoPrincipalCelulaEsquerda & "''>Número: <strong>" &
+                                          varCabecalhoEmail.numero &" Rev. 0"&
+                                          "</strong><br>Tipo: <strong>" &
+                                          varCabecalhoEmail.tipo &
+                                          "</strong></td><td style=''" & estiloCabecalhoPrincipalCelulaCentro & "''>Página<br><strong>1 de " & var_TotalPaginas & "</strong></td></tr><tr style=''" & estiloLinhaNoBreak & "''><td colspan='5' style=''" & estiloCabecalhoPrincipalCelulaSemBorda & "''><table style=''" & estiloTabelaPadrao & "'' cellpadding='5' cellspacing='0'><tr style=''" & estiloLinhaNoBreak & "''><td style=''" & estiloCabecalhoTexto & "width:20%;'>Data</td><td style=''" & estiloResposta & "width:30%;;'>" &
+                                          Text(varCabecalhoEmail.data, "dd/mm/yyyy") &
+                                          "</td><td style=''" & estiloCabecalhoTexto & "width:20%;'>Responsável</td><td style=''" & estiloResposta & "width:30%;;'>" &
+                                          Coalesce(varCabecalhoEmail.responsavel, "") &
+                                          "</td></tr><tr style=''" & estiloLinhaNoBreak & "''><td style=''" & estiloCabecalhoTexto & "'>Projeto</td><td style=''" & estiloResposta & "'' colspan='3'>" &
+                                          projetoFormatado &
+                                          "</td></tr></table></td></tr></table></td></tr></thead><tbody><tr style=''" & estiloLinhaNoBreak & "''><td style=''" & estiloLayoutCelula & "''><div style=''" & estiloMioloBloco & "''><table style=''" & estiloTabelaPadrao & "'' cellpadding='5' cellspacing='0'><tr style=''" & estiloLinhaNoBreak & "''><td style=''" & estiloSecao & "''>Participantes</td></tr></table><div style=''" & estiloLegenda & "''>🟢 P = Presente&nbsp;;&nbsp;;|&nbsp;;&nbsp;;🔴 A = Ausente</div><table style=''" & estiloTabelaParticipantes & "'' cellpadding='5' cellspacing='0'><tr style=''" & estiloLinhaNoBreak & "''><th style=''" & estiloCabecalhoTexto & "width:28%;;'>Nome</th><th style=''" & estiloCabecalhoTexto & "width:18%;'>Empresa</th><th style=''" & estiloCabecalhoTexto & "width:34%;;'>E-mail</th><th style=''" & estiloCabecalhoTexto & "width:10%;'>Presença</th><th style=''" & estiloCabecalhoTexto & "width:10%;;'>Telefone</th></tr>" &
+                                          Concat(
+                                            var_TblAttendance As att,
+                                            With(
+                                              {
+                                                nome: Coalesce(Text(att.Value.nome), ""),
+                                                empresa: Coalesce(Text(att.Value.empresa), ""),
+                                                email: Coalesce(Text(att.Value.email), ""),
+                                                presenca: Upper(Coalesce(Text(att.Value.presenca), "")),
+                                                telefone: Coalesce(Text(att.Value.telefone), "")
+                                              },
+                                              With(
+                                                {
+                                                  presencaTexto: Switch(presenca, "P", "🟢 P", "A", "🔴 A", "", "🔵 N/V", presenca),
+                                                  presencaEstilo: "border:1px solid #d8d8d8;color:#000000;background-color:transparent;padding:3px;word-break:break-word;vertical-align:top;text-align:center;font-weight:bold;white-space:nowrap;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;" & Switch(presenca, "P", "color:#0d875c;", "A", "color:#ad2a23;", "R", "color:#0066cc;", "")
+                                                },
+                                                "<tr style=''" & "page-break-inside:avoid;break-inside:avoid;" & "''><td style=''" & "border:1px solid #d8d8d8;color:#000000;background-color:transparent;padding:3px;word-break:break-word;vertical-align:top;text-align:left;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;" & "''>" & nome & "</td><td style=''" & "border:1px solid #d8d8d8;color:#000000;background-color:transparent;padding:3px;word-break:break-word;vertical-align:top;text-align:left;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;" & "''>" & empresa & "</td><td style=''" & "border:1px solid #d8d8d8;color:#000000;background-color:transparent;padding:3px;word-break:break-word;vertical-align:top;text-align:left;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;" & "''>" & email & "</td><td style=''" & presencaEstilo & "''>" & presencaTexto & "</td><td style=''" & "border:1px solid #d8d8d8;color:#000000;background-color:transparent;padding:3px;word-break:break-word;vertical-align:top;text-align:left;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;" & "''>" & telefone & "</td></tr>"
+                                              )
+                                            )
+                                          ) &
+                                          "</table></div></td></tr></tbody></table></div>"
+                                        );
+                                        Set(var_HTML_Itens,
+                                          Concat(
+                                            Filter(Sequence(var_TotalPaginas), Value > 1),
+                                            "<div style=''" & estiloContainer & If(Value < var_TotalPaginas, estiloQuebraPagina, "") & "''><table style=''" & estiloLayoutTable & "'' cellpadding='5' cellspacing='0'><thead><tr style=''" & estiloLinhaNoBreak & "''><td style=''" & estiloLayoutCelula & "''><table style=''" & estiloCabecalhoPrincipal & "'' cellpadding='5' cellspacing='0'><tr style=''" & estiloLinhaNoBreak & "''><td width='20%' style=''" & estiloCabecalhoPrincipalCelulaCentro & "''><img src='" & LogoVale & "' alt='' width='90%'></td><td width='20%' style=''" & estiloCabecalhoPrincipalCelulaCentro & "''><img src='' alt='' width='90%'></td><td width='20%' style=''" & estiloCabecalhoPrincipalCelulaCentro & "''>Classificação<br>USO RESTRITO<strong></strong></td><td colspan='2' width='60%' style=''" & estiloCabecalhoPrincipalCelulaEsquerda & "''>" &
+                                            projetoFormatado &
+                                            "</td></tr><tr style=''" & estiloLinhaNoBreak & "''><td colspan='3' style=''" & estiloCabecalhoPrincipalCelulaEsquerda & "''><strong>"&tituloFormatado&"</strong></td><td style=''" & estiloCabecalhoPrincipalCelulaEsquerda & "''>Número: <strong>" &
+                                            varCabecalhoEmail.numero & " Rev. 0"&
+                                            "</strong><br>Tipo: <strong>" &
+                                            varCabecalhoEmail.tipo &
+                                            "</strong></td><td style=''" & estiloCabecalhoPrincipalCelulaCentro & "''>Página<br><strong>" & Value & " de " & var_TotalPaginas & "</strong></td></tr><tr style=''" & estiloLinhaNoBreak & "''><td colspan='5' style=''" & estiloCabecalhoPrincipalCelulaSemBorda & "''><table style=''" & estiloTabelaPadrao & "'' cellpadding='5' cellspacing='0'><tr style=''" & estiloLinhaNoBreak & "''><td style=''" & estiloCabecalhoTexto & "width:20%;'>Data</td><td style=''" & estiloResposta & "width:30%;;'>" &
+                                            Text(varCabecalhoEmail.data, "dd/mm/yyyy") &
+                                            "</td><td style=''" & estiloCabecalhoTexto & "width:20%;'>Responsável</td><td style=''" & estiloResposta & "width:30%;;'>" &
+                                            Coalesce(varCabecalhoEmail.responsavel, "") &
+                                            "</td></tr><tr style=''" & estiloLinhaNoBreak & "''><td style=''" & estiloCabecalhoTexto & "'>Projeto</td><td style=''" & estiloResposta & "'' colspan='3'>" &
+                                            projetoFormatado &
+                                            "</td></tr></table></td></tr></table></td></tr></thead><tbody><tr style=''" & estiloLinhaNoBreak & "''><td style=''" & estiloLayoutCelula & "''><div style=''" & estiloMioloBloco & "''><table style=''" & estiloTabelaPadrao & "'' cellpadding='5' cellspacing='0'><tr style=''" & estiloLinhaNoBreak & "''><td style=''" & estiloSecao & "''>Itens Registrados (Continuação)</td></tr></table><table style=''" & estiloTabelaItens & "'' cellpadding='5' cellspacing='0'><tr style=''" & estiloLinhaNoBreak & "''><th style=''" & estiloCabecalhoTexto & "width:10%;;'>Item</th><th style=''" & estiloCabecalhoTexto & "width:46%;'>Descrição</th><th style=''" & estiloCabecalhoTexto & "width:18%;;'>Responsável (Nome / E-mail)</th><th style=''" & estiloCabecalhoTexto & "width:16%;'>Data</th><th style=''" & estiloCabecalhoTexto & "width:10%;;text-align:center;;'>Status</th></tr>" &
+                                            Concat(
+                                              Filter(col_ItensPaginados, Pagina = Value) As pgItem,
+                                              With({itm: pgItem.ItemData},
+                                                With(
+                                                  {
+                                                    itemCodigo: Coalesce(Text(itm.Value.item), ""),
+                                                    descricaoBruta: Concat(ForAll(Sequence(CountRows(Table(itm.Value.historico)),1),
+                                                      If(Value = CountRows(Table(itm.Value.historico)),Text(DateValue(Index(Table(itm.Value.historico),Value).Value.criadoEm),"yyyy-mm-dd")&": "&Text(Index(Table(itm.Value.historico),Value).Value.descricao),"<i style='color:lightgray'>"&Text(DateValue(Index(Table(itm.Value.historico),Value).Value.criadoEm),"yyyy-mm-dd")&": "&Text(Index(Table(itm.Value.historico),Value).Value.descricao)&"</i>")
+                                                    ),Value,"<br>"),
+                                                    responsavelNome: If(IsBlank(itm.Value.UltimoHistorico), "", Coalesce(Text(itm.Value.UltimoHistorico.responsavel.nome), "")),
+                                                    responsavelEmail: If(IsBlank(itm.Value.UltimoHistorico), "", Coalesce(Text(itm.Value.UltimoHistorico.responsavel.email), "")),
+                                                    dataTexto: If(IsBlank(itm.Value.UltimoHistorico), "", Coalesce(Text(itm.Value.UltimoHistorico.data), "")),
+                                                    statusTexto: If(IsBlank(itm.Value.UltimoHistorico), "", Coalesce(Text(itm.Value.UltimoHistorico.status), "")),
+                                                    temFilhos: If(IsBlank(itm.Value.filhos), false, CountRows(Table(itm.Value.filhos)) > 0)
+                                                  },
+                                                  With(
+                                                    {
+                                                      descricaoHtml: Substitute(Substitute(TrimEnds(descricaoBruta), Char(13), ""), Char(10), "<br>"),
+                                                      responsavelHtml: If(!IsBlank(responsavelNome) && !IsBlank(responsavelEmail), responsavelNome & " / " & responsavelEmail, Coalesce(responsavelNome, responsavelEmail)),
+                                                      dataFormatada: If(IsBlank(dataTexto), "", With({dataConvertida: IfError(DateValue(dataTexto), Blank())}, If(IsBlank(dataConvertida), "", Text(dataConvertida, "dd/mm/yyyy")))),
+                                                      statusRepresentacao: Switch(statusTexto, "Concluído", "🟢 Concluído", "Pendente", "🟡 Pendente", "Em Andamento", "🔵 Em andamento", "Cancelado", "⚫ Cancelado","Info","⚪ Info", Coalesce(statusTexto, "")),
+                                                      statusEstilo: "border:1px solid #d8d8d8;color:#000000;background-color:transparent;padding:3px;word-break:break-word;vertical-align:top;text-align:center;font-weight:bold;white-space:nowrap;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;" & If(statusTexto = "Concluído", "color:#0d875c;", "")
+                                                    },
+                                                    If(
+                                                      temFilhos,
+                                                      "<tr style=''" & "page-break-inside:avoid;break-inside:avoid;" & "''><td style=''" & "border:1px solid #d8d8d8;color:#000000;background-color:#e0f2f1;padding:3px;word-break:break-word;vertical-align:top;text-align:left;font-weight:bold;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;" & "''>" & itemCodigo & "</td><td style=''" & "border:1px solid #d8d8d8;color:#000000;background-color:#e0f2f1;padding:3px;word-break:break-word;vertical-align:top;text-align:left;font-weight:bold;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;" & "'' colspan='4'>" &descricaoHtml & "</td></tr>",
+                                                      "<tr style=''" & "page-break-inside:avoid;break-inside:avoid;" & "''><td style=''" & "border:1px solid #d8d8d8;color:#000000;background-color:transparent;padding:3px;word-break:break-word;vertical-align:top;text-align:left;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;" & "''>" & itemCodigo & "</td><td style=''" & "border:1px solid #d8d8d8;color:#000000;background-color:transparent;padding:3px;word-break:break-word;vertical-align:top;text-align:left;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;" & "''>" &descricaoHtml & "</td><td style=''" & "border:1px solid #d8d8d8;color:#000000;background-color:transparent;padding:3px;word-break:break-word;vertical-align:top;text-align:left;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;" & "''>" & Coalesce(responsavelHtml, "") & "</td><td style=''" & "border:1px solid #d8d8d8;color:#000000;background-color:transparent;padding:3px;word-break:break-word;vertical-align:top;text-align:left;font-family:'Vale Sans','Segoe UI',Arial,sans-serif;font-size:10pt;" & "''>" & dataFormatada & "</td><td style=''" & statusEstilo & "''>" & statusRepresentacao & "</td></tr>"
+                                                    )
+                                                  )
+                                                ))
+                                            ) &
+                                            "</table></div></td></tr></tbody></table></div>"
+                                          )
+                                        );
+                                        Set(
+                                          gbl_Email_Corpo,
+                                          "<!DOCTYPE html><html lang='pt-BR'><head><meta charset='UTF-8'><title>" & varCabecalhoEmail.numero & "</title></head><body style=''" & estiloBody & "''>" &
+                                          var_HTML_Pagina1 &
+                                          var_HTML_Itens &
+                                          "</body></html>"
+                                        )
+                                      );
+                                      Set(showPreviewEmail, true);
+                                      Notify("Prévia gerada com sucesso! Revise o conteúdo antes de enviar.", NotificationType.Information)
+                                    Text: ="Gerar Prévia"
+                                    Visible: =!showPreviewEmail
+                                    Width: =200
+                              - ContainerPreviewEmail:
+                                  Control: GroupContainer@1.4.0
+                                  Variant: AutoLayout
+                                  Properties:
+                                    LayoutDirection: =LayoutDirection.Vertical
+                                    LayoutGap: =10
+                                    LayoutMaxHeight: =
+                                    LayoutMaxWidth: =
+                                    Visible: =showPreviewEmail
+                                  Children:
+                                    - lblPreviewTitulo:
+                                        Control: Label@2.5.1
+                                        Properties:
+                                          AlignInContainer: =AlignInContainer.Stretch
+                                          FontWeight: =FontWeight.Bold
+                                          LayoutMaxHeight: =
+                                          LayoutMaxWidth: =
+                                          Size: =16
+                                          Text: ="Prévia do E-mail:"
+                                    - htmlPreviewEmail:
+                                        Control: HtmlViewer@2.1.0
+                                        Properties:
+                                          AlignInContainer: =AlignInContainer.Stretch
+                                          Height: =400
+                                          HtmlText: =gbl_Email_Corpo
+                                          LayoutMaxHeight: =
+                                          LayoutMaxWidth: =
+                                    - btnEnviarEmailCompleto:
+                                        Control: Button@0.0.45
+                                        Properties:
+                                          AlignInContainer: =AlignInContainer.Center
+                                          Height: =50
+                                          LayoutMaxHeight: =
+                                          LayoutMaxWidth: =
+                                          OnSelect: |-
+                                            =Set(gbl_EmailAnexos, {Name: varCabecalhoEmail.numero & ".html", ContentBytes: gbl_Email_Corpo});
+                                            'PowerAppV2->Enviarumemail(V2)'.Run(
+                                                gbl_Email_Assunto,
+                                                gbl_Email_Destinatarios,gbl_EmailAnexos.Name,gbl_Email_MensagemAdicional,gbl_EmailAnexos
+                                            );
+                                            Notify("E-mail enviado com sucesso!", NotificationType.Success);
+                                            Set(showModalEmailAta, false);
+                                            Set(showPreviewEmail, false);
+                                            Set(varParsedAtaEmail, Blank())
+                                          Text: ="Enviar E-mail"
+                                          Width: =200
+                                    - btnVoltarPreview:
+                                        Control: Button@0.0.45
+                                        Properties:
+                                          AlignInContainer: =AlignInContainer.Center
+                                          Height: =40
+                                          LayoutMaxHeight: =
+                                          LayoutMaxWidth: =
+                                          OnSelect: =Set(showPreviewEmail, false)
+                                          Text: ="Voltar para Edição"
+                                          Width: =150
+                        - ContainerEmailPendentes:
+                            Control: GroupContainer@1.4.0
+                            Variant: AutoLayout
+                            Properties:
+                              LayoutDirection: =LayoutDirection.Vertical
+                              LayoutGap: =10
+                              LayoutMaxHeight: =
+                              LayoutMaxWidth: =
+                              Visible: =var_EtapaEmail = 2
+                            Children:
+                              - lblSelecionarResponsaveis:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    AlignInContainer: =AlignInContainer.Stretch
+                                    LayoutMaxHeight: =
+                                    LayoutMaxWidth: =
+                                    Size: =14
+                                    Text: ="Selecione os responsáveis que receberão e-mail com ações pendentes:"
+                              - galResponsaveisPendentes:
+                                  Control: Gallery@2.15.0
+                                  Variant: Vertical
+                                  Properties:
+                                    Height: =300
+                                    Items: =colResponsaveisPendentes
+                                    LayoutMaxHeight: =
+                                    LayoutMaxWidth: =
+                                    LayoutMinHeight: =0
+                                    TemplateSize: =50
+                                  Children:
+                                    - ContainerResponsavelItem:
+                                        Control: GroupContainer@1.4.0
+                                        Variant: AutoLayout
+                                        Properties:
+                                          BorderThickness: =1
+                                          Fill: =RGBA(245, 245, 245, 1)
+                                          Height: =Parent.TemplateHeight
+                                          LayoutDirection: =LayoutDirection.Horizontal
+                                          PaddingBottom: =10
+                                          PaddingLeft: =10
+                                          PaddingRight: =10
+                                          PaddingTop: =10
+                                          Width: =Parent.TemplateWidth
+                                        Children:
+                                          - chkSelecionarResponsavel:
+                                              Control: CheckBox@0.0.30
+                                              Properties:
+                                                Checked: =ThisItem.Selecionado
+                                                LayoutMaxHeight: =
+                                                LayoutMaxWidth: =
+                                                OnCheck: |-
+                                                  =Patch(colResponsaveisPendentes, ThisItem, {Selecionado: true})
+                                                OnUncheck: |-
+                                                  =Patch(colResponsaveisPendentes, ThisItem, {Selecionado: false})
+                                                Width: =30
+                                          - lblResponsavelNome:
+                                              Control: Label@2.5.1
+                                              Properties:
+                                                FillPortions: =1
+                                                FontWeight: =FontWeight.Bold
+                                                LayoutMaxHeight: =
+                                                LayoutMaxWidth: =
+                                                Text: =ThisItem.nome & " (" & ThisItem.email & ")"
+                              - btnEnviarEmailsResponsaveis:
+                                  Control: Button@0.0.45
+                                  Properties:
+                                    AlignInContainer: =AlignInContainer.Center
+                                    DisplayMode: =If(CountRows(Filter(colResponsaveisPendentes, Selecionado)) > 0, DisplayMode.Edit, DisplayMode.Disabled)
+                                    Height: =50
+                                    LayoutMaxHeight: =
+                                    LayoutMaxWidth: =
+                                    OnSelect: "=ForAll(Filter(colResponsaveisPendentes, Selecionado) As CRP,\n    With(\n        {\n            MeusItensDiretos: Filter(\n                colItens,\n                !IsBlank(UltimoHistorico) &&\n                Lower(UltimoHistorico.responsavelEmail) = Lower(CRP.email) &&\n                With(\n                    {statusNormalizado: Lower(Substitute(UltimoHistorico.status, \"í\", \"i\"))},\n                    statusNormalizado <> \"cancelado\" && statusNormalizado <> \"concluido\" && statusNormalizado <> \"info\"\n                )\n            )\n        },\n        If(CountRows(MeusItensDiretos) > 0,\n            With(\n                {\n                    ItensHierarquicos: Filter(\n                        colItens,\n                        item in MeusItensDiretos.item ||\n                        CountRows(Filter(MeusItensDiretos, StartsWith(item, colItens[@item] & \".\"))) > 0\n                    )\n                },\n                With(\n                    {\n                        ItensPreparados: Sort(\n                            AddColumns(\n                                ItensHierarquicos,\n                                SortKey, Concat(Split(item, \".\"), Text(Value(Value), \"00000000\") & \".\"),\n                                NivelCalculado, CountRows(Split(item, \".\")),\n                                EhResponsavelDireto, item in MeusItensDiretos.item\n                            ),\n                            SortKey,\n                            SortOrder.Ascending\n                        )\n                    },\n                    With(\n                        {\n                            HTMLGerado: \"<html><body style='font-family: Segoe UI, Arial, sans-serif; padding: 20px; color: #333;'>\n                            \n                            <h2>Ata \" & IfError(Text(ParseJSON(varJSONImportado).cabecalho.numero), \"\") & \" - Ações Pendentes</h2>\n                            \n                            <p><strong>Data:</strong> \" & Text(IfError(DateValue(Text(ParseJSON(varJSONImportado).cabecalho.data)), Today()), \"dd/mm/yyyy\") & \"<br>\n                            <strong>Tipo:</strong> \" & IfError(Text(ParseJSON(varJSONImportado).cabecalho.tipo), \"\") & \"<br>\n                            <strong>Título:</strong> \" & IfError(Text(ParseJSON(varJSONImportado).cabecalho.titulo), \"\") & \"</p>\n                            \n                            <p>Prezado(a) <strong>\" & Proper(CRP.nome) & \"</strong>,</p>\n                            \n                            <p>Não é necessário responder este e-mail.</p>\n\n                            <p>Este é um e-mail gerado automaticamente na reunião do dia \" & Text(IfError(DateValue(Text(ParseJSON(varJSONImportado).cabecalho.data)), Today()), \"dd/mm/yyyy\") & \", referente ao Projeto \" & IfError(Text(ParseJSON(varJSONImportado).cabecalho.projeto), \"\") & \".</p>\n\n                            <p>Segue lista de ações conforme acordado nesta reunião.</p>\n\n                            <p>Este e-mail serve como um lembrete das ações que se encontram sob sua responsabilidade, para orientá-lo sobre as ações que serão solicitadas na próxima reunião.</p>\n                            \n                            <h3>Ações Pendentes:</h3>\n                            <table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%; border: 1px solid #999; font-size: 10pt;'>\n                                <tr style='background-color: #007e7a; color: white;'>\n                                    <th style='width: 10%;'>Item</th>\n                                    <th style='width: 50%;'>Descrição</th>\n                                    <th style='width: 20%; text-align: center;'>Data</th>\n                                    <th style='width: 20%; text-align: center;'>Status</th>\n                                </tr>\" & \n                                Concat(ItensPreparados As ir, \n                                    With({\n                                        bgColor: If(ir.EhResponsavelDireto, \n                                            \"#ffffff\",\n                                            If(ir.NivelCalculado = 1, \"#cccccc\", \"#e6e6e6\")\n                                        ),\n                                        fontWeight: If(!ir.EhResponsavelDireto, \"bold\", \"normal\"),\n                                        paddingLeft: (ir.NivelCalculado - 1) * 15 & \"px\"\n                                    },\n                                    If(ir.EhResponsavelDireto,\n                                        \"<tr style='background-color: \" & bgColor & \";'>\n                                            <td style='vertical-align: top;'>\" & ir.item & \"</td>\n                                            <td style='vertical-align: top; padding-left: \" & paddingLeft & \";'>\" & \n                                                Concat(ForAll(Sequence(CountRows(Table(ir.historico)),1),\n                If(Value = CountRows(Table(ir.historico)),Text(DateValue(Index(Table(ir.historico),Value).criadoEm),\"yyyy-mm-dd\")&\": \"&Text(Index(Table(ir.historico),Value).descricao),\"<i style='color:lightgray'>\"&Text(DateValue(Index(Table(ir.historico),Value).criadoEm),\"yyyy-mm-dd\")&\": \"&Text(Index(Table(ir.historico),Value).descricao)&\"</i>\")\n              ),Value,\"<br>\") & \n                                            \"</td>\n                                            <td style='text-align: center; vertical-align: top;'>\" & \n                                                If(IsBlank(ir.UltimoHistorico) || IsBlank(ir.UltimoHistorico.data), \"-\", Text(ir.UltimoHistorico.data, \"dd/mm/yyyy\")) & \n                                            \"</td>\n                                            <td style='text-align: center; vertical-align: top;'>\" & \n                                                If(IsBlank(ir.UltimoHistorico), \"\", ir.UltimoHistorico.status) & \n                                            \"</td>\n                                        </tr>\",\n                                        \"<tr style='background-color: \" & bgColor & \"; font-weight: \" & fontWeight & \";'>\n                                            <td style='vertical-align: top; border-bottom: 1px solid #999;'>\" & ir.item & \"</td>\n                                            <td colspan='3' style='vertical-align: top; padding-left: \" & paddingLeft & \"; border-bottom: 1px solid #999;'>\n                                                \" & If(IsBlank(ir.UltimoHistorico), \"\", ir.UltimoHistorico.descricao) & \"\n                                            </td>\n                                        </tr>\"\n                                    )\n                                    )\n                                ) & \n                            \"</table>\n                            </body></html>\"\n                        },\n                        Office365Outlook.SendEmailV2(\n                            CRP.email, \n                            \"Ações Pendentes - Ata \" & IfError(Text(ParseJSON(varJSONImportado).cabecalho.numero), \"\"), \n                            HTMLGerado, \n                            {\n                                Importance: \"Normal\",\n                                IsHtml: true\n                            }\n                        )\n                    )\n                )\n            )\n        )\n    )\n);\nNotify(\"E-mails enviados com sucesso!\", NotificationType.Success);\nSet(showModalEmailAta, false)"
+                                    Text: ="Enviar E-mails"
+                                    Width: =200
+                        - btnCancelarEmail:
+                            Control: Button@0.0.45
+                            Properties:
+                              AlignInContainer: =AlignInContainer.Center
+                              Height: =50
+                              LayoutMaxHeight: =
+                              LayoutMaxWidth: =
+                              OnSelect: =Set(showModalEmailAta, false);Set(showPreviewEmail, false)
+                              Text: ="Cancelar"
+                              Width: =120

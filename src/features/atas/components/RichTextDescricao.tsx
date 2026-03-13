@@ -38,6 +38,7 @@ export default function RichTextDescricao({
   onFormatApplied,
 }: RichTextDescricaoProps) {
   const elRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const el = elRef.current
@@ -79,6 +80,80 @@ export default function RichTextDescricao({
       onFormatApplied?.()
     },
     [handleInput, disabled, onFormatApplied]
+  )
+
+  const insertImageAtCursor = useCallback(
+    (dataUrl: string) => {
+      const el = elRef.current
+      if (!el) return
+      // Usa insertImage para garantir comportamento consistente em contentEditable
+      document.execCommand('insertImage', false, dataUrl)
+      el.focus()
+      handleInput()
+      onFormatApplied?.()
+    },
+    [handleInput, onFormatApplied]
+  )
+
+  const handleImageSelected = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      e.target.value = ''
+      if (!file || disabled) return
+      if (!file.type.startsWith('image/')) {
+        alert('Por favor selecione um arquivo de imagem.')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = () => {
+        const base = reader.result
+        if (typeof base !== 'string') return
+        const img = new Image()
+        img.onload = () => {
+          try {
+            const MAX_DIM = 480 // largura/altura máxima em pixels
+            let { width, height } = img
+            if (width > MAX_DIM || height > MAX_DIM) {
+              const scale = Math.min(MAX_DIM / width, MAX_DIM / height)
+              width = Math.round(width * scale)
+              height = Math.round(height * scale)
+            }
+            const canvas = document.createElement('canvas')
+            canvas.width = width
+            canvas.height = height
+            const ctx = canvas.getContext('2d')
+            if (!ctx) return
+            ctx.drawImage(img, 0, 0, width, height)
+
+            // Tenta reduzir tamanho usando qualidade de compressão
+            let quality = 0.7
+            let dataUrl = canvas.toDataURL('image/jpeg', quality)
+            const MAX_LENGTH = 80_000 // alinhado ao sanitizador (~poucos KB)
+            while (dataUrl.length > MAX_LENGTH && quality > 0.3) {
+              quality -= 0.1
+              dataUrl = canvas.toDataURL('image/jpeg', quality)
+            }
+            if (dataUrl.length > MAX_LENGTH) {
+              alert('Imagem muito grande mesmo após compactação. Escolha uma imagem menor.')
+              return
+            }
+            insertImageAtCursor(dataUrl)
+          } catch {
+            alert('Não foi possível processar a imagem selecionada.')
+          }
+        }
+        img.onerror = () => {
+          alert('Não foi possível carregar a imagem selecionada.')
+        }
+        img.src = base
+      }
+      reader.onerror = () => {
+        alert('Erro ao ler o arquivo de imagem.')
+      }
+      reader.readAsDataURL(file)
+    },
+    [disabled, insertImageAtCursor]
   )
 
   return (
@@ -129,6 +204,24 @@ export default function RichTextDescricao({
               }}
             />
           ))}
+        </div>
+        <div className={styles.toolbarGroup}>
+          <button
+            type="button"
+            className={styles.toolbarBtn}
+            onClick={() => fileInputRef.current?.click()}
+            title="Inserir imagem (será compactada automaticamente)"
+            disabled={disabled}
+          >
+            🖼️ Imagem
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleImageSelected}
+          />
         </div>
       </div>
       <div

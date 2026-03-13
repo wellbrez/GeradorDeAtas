@@ -172,6 +172,18 @@
   font-size: var(--font-size-sm);
 }
 
+/* Imagens inseridas na descrição dos itens: limitar tamanho visual para manter leitura confortável */
+.itemDescricao img {
+  max-width: 260px;
+  max-height: 260px;
+  width: auto;
+  height: auto;
+  display: block;
+  margin: 6px 0;
+  object-fit: contain;
+  border-radius: 2px;
+}
+
 .itemMeta {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);

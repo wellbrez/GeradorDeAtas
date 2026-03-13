@@ -11,6 +11,44 @@ function generateId(): string {
   return `ata-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 }
 
+function parseDateOnlyAsLocal(s: string): Date {
+  const t = (s || '').trim()
+  if (t.length === 10 && t[4] === '-' && t[7] === '-') return new Date(t + 'T12:00:00')
+  return new Date(s)
+}
+
+/**
+ * Arquiva atas anteriores com mesmo título, tipo, projeto e contrato, mas com data anterior à nova ata.
+ */
+function archivePreviousMeetingMinutes(storage: MeetingMinutesStorage, keepId: string): void {
+  try {
+    const all = getAllMeetingMinutes()
+    const novo = storage.cabecalho
+    const tituloNovo = (novo.titulo || '').trim()
+    const tipoNovo = (novo.tipo || '').trim()
+    const projetoNovo = (novo.projeto || '').trim()
+    const contratoNovo = (novo.contrato || '').trim()
+    const dataNova = parseDateOnlyAsLocal(novo.data)
+
+    for (const ata of all) {
+      if (ata.id === keepId) continue
+      if (ata.arquivada) continue
+      const cab = ata.cabecalho
+      if ((cab.titulo || '').trim() !== tituloNovo) continue
+      if ((cab.tipo || '').trim() !== tipoNovo) continue
+      if ((cab.projeto || '').trim() !== projetoNovo) continue
+      if ((cab.contrato || '').trim() !== contratoNovo) continue
+
+      const dataAntiga = parseDateOnlyAsLocal(cab.data)
+      if (dataAntiga < dataNova) {
+        setAtaArquivada(ata.id)
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao arquivar atas anteriores:', error)
+  }
+}
+
 /**
  * Obtém todas as atas
  */
@@ -83,6 +121,8 @@ export function createMeetingMinutes(
       createdAt: meetingMinutes.createdAt,
       updatedAt: meetingMinutes.updatedAt,
     })
+    // Após salvar, arquiva atas anteriores com mesma chave (título, tipo, projeto, contrato) e data anterior
+    archivePreviousMeetingMinutes(storage, id)
     return meetingMinutes
   } catch (error) {
     console.error('Erro ao criar ata:', error)

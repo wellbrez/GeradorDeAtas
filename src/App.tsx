@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { MeetingMinutesList, MeetingMinutesForm, EnvConfigModal } from '@features/atas/components'
-import { getMeetingMinutesById, createMeetingMinutes } from '@features/atas/services/meetingMinutesService'
+import { getMeetingMinutesById } from '@features/atas/services/meetingMinutesService'
 import { parseAtaFromHash } from '@/utils/urlAtaImport'
 import { getGamificationEnabled, setGamificationEnabled, SelosEarnedToastProvider } from '@features/gamification'
-import type { MeetingMinutes } from '@/types'
+import type { MeetingMinutes, MeetingMinutesStorage } from '@/types'
 import styles from './App.module.css'
 
 function App() {
@@ -13,6 +13,7 @@ function App() {
   const [listKey, setListKey] = useState(0)
   const [gamificationEnabled, setGamificationEnabledState] = useState(getGamificationEnabled)
   const [configModalOpen, setConfigModalOpen] = useState(false)
+  const [initialStorageFromHash, setInitialStorageFromHash] = useState<MeetingMinutesStorage | null>(null)
 
   const handleGamificationToggle = (checked: boolean) => {
     setGamificationEnabled(checked)
@@ -25,11 +26,11 @@ function App() {
     if (!storage) return
 
     try {
-      const ata = createMeetingMinutes(storage)
-      setFormAta(ata)
+      // Não cria ata automaticamente; apenas abre o formulário pré-preenchido.
+      setInitialStorageFromHash(storage)
+      setFormAta(null)
       setFormIsCopy(false)
       setFormOpen(true)
-      setListKey((k) => k + 1)
       // Remove o hash da URL para evitar reimportar ao recarregar
       window.history.replaceState(null, '', window.location.pathname + window.location.search)
     } catch (e) {
@@ -70,6 +71,7 @@ function App() {
         isCopy={formIsCopy}
         onSaved={handleFormSaved}
         gamificationEnabled={gamificationEnabled}
+        initialStorageFromHash={initialStorageFromHash}
       />
       </SelosEarnedToastProvider>
     )

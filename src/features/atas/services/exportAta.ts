@@ -132,6 +132,7 @@ function normalizeForFilter(s: string): string {
 function buildHeaderBlock(c: MeetingMinutes['cabecalho'], pagina: number, total: number, logoDataUrl?: string | null): string {
   const titulo = nl2br(esc(c.titulo || ''))
   const projeto = nl2br(esc(c.projeto || ''))
+  const contrato = nl2br(esc(c.contrato || ''))
   const logoCellStyle = E.cabCentro + ';display:flex;justify-content:center;align-items:center;min-height:56px;min-width:120px;width:20%;box-sizing:border-box;'
   const logoCell = logoDataUrl && logoDataUrl.startsWith('data:image')
     ? `<img src="${esc(logoDataUrl)}" alt="Logo" style="max-width:100%;max-height:56px;width:auto;height:auto;object-fit:contain;display:block;border:none;outline:none;vertical-align:middle;" />`
@@ -144,7 +145,7 @@ function buildHeaderBlock(c: MeetingMinutes['cabecalho'], pagina: number, total:
     `<tr style="${E.noBreak}"><td colspan="5" style="${E.cabSemBorda}">` +
     `<table style="${E.tabela}" cellpadding="5" cellspacing="0">` +
     `<tr style="${E.noBreak}"><td style="${E.cabTexto}width:20%;">Data</td><td style="${E.resp}width:30%;">${dataBr(c.data)}</td><td style="${E.cabTexto}width:20%;">Responsável</td><td style="${E.resp}width:30%;">${esc(c.responsavel)}</td></tr>` +
-    `<tr style="${E.noBreak}"><td style="${E.cabTexto}">Projeto</td><td style="${E.resp}" colspan="3">${projeto}</td></tr>` +
+    `<tr style="${E.noBreak}"><td style="${E.cabTexto}">Projeto</td><td style="${E.resp}">${projeto}</td><td style="${E.cabTexto}width:20%;">Contrato</td><td style="${E.resp}width:30%;">${contrato}</td></tr>` +
     `</table></td></tr></table>`
   )
 }
@@ -186,11 +187,11 @@ function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions): strin
     const idAttr = attr(item.id)
     const paiAttr = attr(item.pai ?? '')
     if (temFilhos) {
-      itensRows.push(`<tr style="${E.noBreak}" data-ata-item-row data-ata-parent="1" data-ata-id="${idAttr}" data-ata-pai="${paiAttr}" data-ata-desc="${attr(descNorm)}" data-ata-resp="" data-ata-date="" data-ata-status=""><td style="${E.itemPai}">${esc(item.item)}</td><td style="${E.itemPai}" colspan="4">${descHtml}</td></tr>`)
+      itensRows.push(`<tr style="${E.noBreak}" data-ata-item-row data-ata-parent="1" data-ata-id="${idAttr}" data-ata-pai="${paiAttr}" data-ata-desc="${attr(descNorm)}" data-ata-resp="" data-ata-date="" data-ata-status=""><td style="${E.itemPai}">${esc(item.item)}</td><td style="${E.itemPai}" colspan="4"><div class="ata-descricao">${descHtml}</div></td></tr>`)
     } else {
       const dataCellHtml = dataCellComHistorico(item)
       const respCellHtml = respCellComHistorico(item)
-      itensRows.push(`<tr style="${E.noBreak}" data-ata-item-row data-ata-id="${idAttr}" data-ata-pai="${paiAttr}" data-ata-desc="${attr(descNorm)}" data-ata-resp="${attr(respNorm)}" data-ata-date="${attr(dataNorm)}" data-ata-status="${attr(statusNorm)}"><td style="${E.resp}">${esc(item.item)}</td><td style="${E.resp}">${descHtml}</td><td style="${E.resp}">${respCellHtml}</td><td style="${E.resp}">${dataCellHtml}</td><td style="${statusEstilo}">${esc(statusDisp)}</td></tr>`)
+      itensRows.push(`<tr style="${E.noBreak}" data-ata-item-row data-ata-id="${idAttr}" data-ata-pai="${paiAttr}" data-ata-desc="${attr(descNorm)}" data-ata-resp="${attr(respNorm)}" data-ata-date="${attr(dataNorm)}" data-ata-status="${attr(statusNorm)}"><td style="${E.resp}">${esc(item.item)}</td><td style="${E.resp}"><div class="ata-descricao">${descHtml}</div></td><td style="${E.resp}">${respCellHtml}</td><td style="${E.resp}">${dataCellHtml}</td><td style="${statusEstilo}">${esc(statusDisp)}</td></tr>`)
     }
   })
 
@@ -274,9 +275,21 @@ function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions): strin
     '<a href="' + esc(appLink) + '" target="_blank" rel="noopener" style="color:#007e7a;text-decoration:underline;font-weight:bold;">🔗 Abrir esta ata no aplicativo (modo edição)</a>' +
     '</div>'
 
+  const imageCss = `
+.ata-descricao img {
+  max-width: 260px;
+  max-height: 260px;
+  width: auto;
+  height: auto;
+  display: block;
+  margin: 4px 0;
+  object-fit: contain;
+}
+`
+
   return [
     '<!DOCTYPE html><html lang="pt-BR">',
-    '<head><meta charset="UTF-8"><title>' + esc(c.numero) + '</title><style>' + printCss + '</style></head>',
+    '<head><meta charset="UTF-8"><title>' + esc(c.numero) + '</title><style>' + printCss + imageCss + '</style></head>',
     '<body style="' + E.body + '">',
     '<div id="ata-content" style="' + E.container + '">' + linkBlock + paginasHtml.join('') + '</div>',
     '<script>' + filterScript + '</script>',
