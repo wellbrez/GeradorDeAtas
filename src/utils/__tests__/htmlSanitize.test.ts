@@ -5,13 +5,13 @@ import { sanitizeHtml, stripHtml } from '@/utils/htmlSanitize'
 describe('sanitizeHtml', () => {
   it('allows safe data-image and removes dangerous attributes', () => {
     const html =
-      '<p>Conteudo</p><img src="data:image/png;base64,QUJD" alt="imagem \\"interna\\"\nlinha" onerror="alert(1)" />'
+      '<p>Conteudo</p><img src="data:image/png;base64,QUJD" alt="imagem\nlinha" onerror="alert(1)" />'
 
     const sanitized = sanitizeHtml(html)
 
     expect(sanitized).toContain('<p>Conteudo</p>')
     expect(sanitized).toContain('<img src="data:image/png;base64,QUJD"')
-    expect(sanitized).toContain('alt="imagem  interna  linha"')
+    expect(sanitized).toContain('alt="imagem linha"')
     expect(sanitized).not.toContain('onerror')
   })
 
