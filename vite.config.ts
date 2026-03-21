@@ -6,6 +6,11 @@ import path from 'path'
 export default defineConfig({
   base: '/GeradorDeAtas/', // obrigatório para GitHub Pages (repo: wellbrez/GeradorDeAtas)
   plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    globals: false,
+    include: ['src/**/*.test.ts'],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
