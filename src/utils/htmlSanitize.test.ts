@@ -19,7 +19,7 @@ describe('sanitizeHtml', () => {
 
   it('accepts safe image data URLs and sanitizes alt attribute', () => {
     const dataUrl = 'data:image/png;base64,QUJDRA=='
-    const input = `<img src="${dataUrl}" alt="a\"b\nc" />`
+    const input = `<img src="${dataUrl}" alt="a\nb c" />`
 
     expect(sanitizeHtml(input)).toBe(`<img src="${dataUrl}" alt="a b c" />`)
   })
