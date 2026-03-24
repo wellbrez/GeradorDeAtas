@@ -32,6 +32,12 @@ function normalizeHeader(h: string): string {
 
 function findFieldForHeader(header: string): keyof Participant | null {
   const n = normalizeHeader(header)
+  if (!n) return null
+  // Cabeçalhos com e-mail/UPN devem priorizar o campo email (evita falso positivo com "participante").
+  if (/\b(e-?mail|upn)\b/i.test(n)) return 'email'
+  for (const [key, fields] of Object.entries(COLUMN_ALIASES)) {
+    if (n === key) return fields[0]
+  }
   for (const [key, fields] of Object.entries(COLUMN_ALIASES)) {
     if (n.includes(key) || key.includes(n)) return fields[0]
   }
