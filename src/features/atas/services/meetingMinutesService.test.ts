@@ -13,7 +13,7 @@ type StoredAta = {
 let storedById: Record<string, StoredAta> = {}
 let storedIds: string[] = []
 
-const storageServiceMock = {
+const storageServiceMock = vi.hoisted(() => ({
   getAllMeetingMinutes: vi.fn(() => [...storedIds]),
   getMeetingMinutes: vi.fn((id: string) => storedById[id] ?? null),
   saveMeetingMinutes: vi.fn((id: string, data: StoredAta) => {
@@ -26,7 +26,7 @@ const storageServiceMock = {
     delete storedById[id]
     storedIds = storedIds.filter((x) => x !== id)
   }),
-}
+}))
 
 vi.mock('@services/storage', () => ({
   storageService: storageServiceMock,
