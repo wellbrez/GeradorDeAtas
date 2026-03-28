@@ -3,9 +3,11 @@ import { sanitizeHtml } from './htmlSanitize'
 
 describe('sanitizeHtml', () => {
   it('preserves valid inline data image with sanitized alt text', () => {
-    const input = '<p>Foto: <img src="data:image/png;base64,AAAA" alt="line1\nline2\"x" /></p>'
+    const input = '<p>Foto: <img src="data:image/png;base64,AAAA" alt="line1\nline2"x" /></p>'
     const result = sanitizeHtml(input)
-    expect(result).toContain('<img src="data:image/png;base64,AAAA" alt="line1 line2 x" />')
+    expect(result).toContain('<img src="data:image/png;base64,AAAA" alt="line1 line2" />')
+    expect(result).not.toContain('\n')
+    expect(result).not.toContain('\r')
     expect(result.startsWith('<p>Foto: ')).toBe(true)
   })
 
