@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
@@ -6,6 +7,9 @@ import path from 'path'
 export default defineConfig({
   base: '/GeradorDeAtas/', // obrigatório para GitHub Pages (repo: wellbrez/GeradorDeAtas)
   plugins: [react()],
+  test: {
+    environment: 'jsdom',
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
