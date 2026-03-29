@@ -14,10 +14,10 @@ describe('htmlSanitize', () => {
 
   it('aceita somente imagem data URL segura e normaliza alt', () => {
     const input =
-      '<img src="data:image/png;base64,AAAA" alt="ok\\"\\nnovo" /><img src="javascript:alert(1)" alt="x" />'
+      `<img src="data:image/png;base64,AAAA" alt='ok"\nnovo' /><img src="javascript:alert(1)" alt="x" />`
     const output = sanitizeHtml(input)
 
-    expect(output).toContain('<img src="data:image/png;base64,AAAA" alt="ok   novo" />')
+    expect(output).toContain('<img src="data:image/png;base64,AAAA" alt="ok  novo" />')
     expect(output).not.toContain('javascript:')
   })
 
