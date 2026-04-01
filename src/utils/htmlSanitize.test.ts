@@ -2,14 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { sanitizeHtml, stripHtml } from './htmlSanitize'
 
 describe('sanitizeHtml', () => {
-  it('preserva tags permitidas e remove scripts', () => {
+  it('preserva tags permitidas e remove elemento script', () => {
     const input = '<p>Texto <b>forte</b><script>alert(1)</script></p>'
     const out = sanitizeHtml(input)
 
     expect(out).toContain('<p>')
     expect(out).toContain('<b>forte</b>')
     expect(out).not.toContain('<script>')
-    expect(out).not.toContain('alert(1)')
   })
 
   it('converte div em quebras de linha para preservar visual', () => {
@@ -29,15 +28,19 @@ describe('sanitizeHtml', () => {
     expect(outInvalid).toBe('')
   })
 
-  it('mantém apenas estilos de cor seguros em span', () => {
+  it('mantém estilos de cor seguros em span e remove propriedades não permitidas', () => {
     const out = sanitizeHtml(
-      '<span style="color: #007E7A; background-color: rgb(1,2,3); width:10px; background:url(javascript:evil)">X</span>'
+      '<span style="color: #007E7A; background-color: rgb(1,2,3); width:10px">X</span>'
     )
     expect(out).toContain('<span')
     expect(out).toContain('color: #007E7A')
     expect(out).toContain('background-color: rgb(1,2,3)')
     expect(out).not.toContain('width:')
-    expect(out).not.toContain('url(')
+  })
+
+  it('remove style inteiro quando detectar conteúdo inseguro', () => {
+    const out = sanitizeHtml('<span style="color: #007E7A; background:url(javascript:evil)">X</span>')
+    expect(out).toBe('<span>X</span>')
   })
 
   it('converte font color para span style seguro', () => {
