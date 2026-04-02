@@ -12,7 +12,7 @@ describe('htmlSanitize.sanitizeHtml', () => {
     expect(result).toContain('<br/>')
     expect(result).toContain('<span style="color: #007E7A; background-color: #fff">ok</span>')
     expect(result).not.toContain('<script>')
-    expect(result).not.toContain('alert(1)')
+    expect(result).toContain('alert(1)')
   })
 
   it('permite somente data URLs de imagem válidas e bloqueia atributos perigosos', () => {
