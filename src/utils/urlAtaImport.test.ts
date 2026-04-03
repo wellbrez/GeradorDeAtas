@@ -6,8 +6,7 @@ import { encodeAtaToHash, parseAtaFromHash } from './urlAtaImport'
  * Helpers para testes de importação/exportação por hash.
  */
 function setWindowHash(encodedHash: string): void {
-  const suffix = encodedHash ? `#${encodedHash}` : ''
-  window.history.replaceState({}, '', `http://localhost/${suffix}`)
+  window.location.hash = encodedHash ? `#${encodedHash}` : ''
 }
 
 function makeStorageFixture(): MeetingMinutesStorage {

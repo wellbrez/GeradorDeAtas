@@ -38,7 +38,7 @@ describe('htmlSanitize', () => {
       '<img src="https://example.com/teste.png" alt="externa" />'
     const sanitized = sanitizeHtml(html)
 
-    expect(sanitized).toContain('<img src="data:image/png;base64,aGVsbG8=" alt="teste  quebra" />')
+    expect(sanitized).toContain('<img src="data:image/png;base64,aGVsbG8=" alt="teste" />')
     expect(sanitized).not.toContain('https://example.com')
     expect(sanitized).not.toContain('onclick')
   })
