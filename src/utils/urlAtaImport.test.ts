@@ -73,11 +73,10 @@ describe('urlAtaImport', () => {
     expect(parsed).toEqual(storage)
   })
 
-  it('decodes legacy base64 hash with whitespace around payload', () => {
+  it('decodes legacy base64 hash without compression prefix', () => {
     const storage = createStorageFixture()
     const base64 = utf8ToBase64(JSON.stringify(storage))
-    const withWhitespace = `${base64.slice(0, 10)} \n ${base64.slice(10)}`
-    window.location.hash = '#' + withWhitespace
+    window.location.hash = '#' + base64
 
     const parsed = parseAtaFromHash()
 

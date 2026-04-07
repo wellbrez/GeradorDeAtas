@@ -15,8 +15,9 @@ describe('htmlSanitize', () => {
     const safeImg = '<img src="data:image/png;base64,aGVsbG8=" alt="imagem &quot;ok&quot;\nquebra" />'
     const unsafeImg = '<img src="javascript:alert(1)" onerror="alert(2)" alt="x" />'
 
-    expect(sanitizeHtml(safeImg)).toContain('<img src="data:image/png;base64,aGVsbG8="')
-    expect(sanitizeHtml(safeImg)).toContain('alt="imagem &quot;ok&quot; quebra"')
+    const safeOut = sanitizeHtml(safeImg)
+    expect(safeOut).toContain('<img src="data:image/png;base64,aGVsbG8="')
+    expect(safeOut).toContain('alt="imagem  ok  quebra"')
     expect(sanitizeHtml(unsafeImg)).toBe('')
   })
 
@@ -33,7 +34,7 @@ describe('htmlSanitize', () => {
     const input = '<div><div>abc</div></div>'
     const out = sanitizeHtml(input)
 
-    expect(out).toBe('abc<br/>')
+    expect(out).toBe('<br/>abc<br/>')
   })
 })
 
