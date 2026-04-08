@@ -40,7 +40,7 @@ npm run build
 
 ## Deploy (GitHub Pages)
 
-O site é publicado **automaticamente** ao dar push na branch **`master`**, via [GitHub Actions](.github/workflows/pages.yml). Não é usada a branch `gh-pages` (evita branches extras só para o site).
+O site é publicado **automaticamente** ao dar push na branch **`main`**, via [GitHub Actions](.github/workflows/pages.yml). Não é usada a branch `gh-pages` (evita branches extras só para o site).
 
 **Configuração única no GitHub:** em **Settings → Pages → Build and deployment**, defina **Source** como **GitHub Actions** (não “Deploy from a branch”).
 
