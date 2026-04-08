@@ -124,6 +124,53 @@ function deveOcultarPeloFiltro(item: Item, dataReuniao: string): boolean {
   return !editadoNoDiaDaReuniao(item, dataReuniao)
 }
 
+/**
+ * Conjunto de IDs visíveis na lista (pesquisa + filtro de ocultar concluídos/cancelados/info).
+ * Com o filtro ativo, itens-pai (organizadores com `filhos`) só entram se houver ao menos um
+ * descendente visível — o status "Pendente" padrão do pai não mantém o header sozinho na lista.
+ */
+function computeVisibleItemIds(
+  raizes: Item[],
+  getFilhos: (paiId: string) => Item[],
+  searchQuery: string,
+  hideConcluidosCancInfo: boolean,
+  dataReuniao: string
+): Set<string> {
+  const set = new Set<string>()
+
+  if (!hideConcluidosCancInfo) {
+    const visitFlat = (item: Item) => {
+      const matchSearch = itemMatchesSearch(item, searchQuery)
+      if (matchSearch) set.add(item.id)
+      getFilhos(item.id).forEach(visitFlat)
+    }
+    raizes.forEach(visitFlat)
+    return set
+  }
+
+  const visitComFiltro = (item: Item): boolean => {
+    const matchSearch = itemMatchesSearch(item, searchQuery)
+    const hideByFilter = deveOcultarPeloFiltro(item, dataReuniao)
+    const temFilhosReais = (item.filhos?.length ?? 0) > 0
+
+    if (!temFilhosReais) {
+      const vis = matchSearch && !hideByFilter
+      if (vis) set.add(item.id)
+      return vis
+    }
+
+    const algumFilhoVisivel = getFilhos(item.id).some((child) => visitComFiltro(child))
+    const vis = matchSearch && algumFilhoVisivel
+    if (vis) set.add(item.id)
+    return vis
+  }
+
+  raizes.forEach((r) => {
+    visitComFiltro(r)
+  })
+  return set
+}
+
 function itemMatchesSearch(item: Item, query: string): boolean {
   if (!query.trim()) return true
   const q = query.trim().toLowerCase()
@@ -387,17 +434,11 @@ export default function Step2Itens({
 
   const itensRaiz = itens.filter((i) => !i.pai)
 
-  const visibleIds = useMemo(() => {
-    const set = new Set<string>()
-    const visit = (item: Item) => {
-      const matchSearch = itemMatchesSearch(item, searchQuery)
-      const hideByFilter = hideConcluidosCancInfo && deveOcultarPeloFiltro(item, dataReuniao)
-      if (matchSearch && !hideByFilter) set.add(item.id)
-      getFilhos(item.id).forEach(visit)
-    }
-    itensRaiz.forEach(visit)
-    return set
-  }, [itensRaiz, searchQuery, hideConcluidosCancInfo, dataReuniao, getFilhos])
+  const visibleIds = useMemo(
+    () =>
+      computeVisibleItemIds(itensRaiz, getFilhos, searchQuery, hideConcluidosCancInfo, dataReuniao),
+    [itensRaiz, searchQuery, hideConcluidosCancInfo, dataReuniao, getFilhos]
+  )
 
   const getFilhosFiltered = useMemo(
     () => (paiId: string) => getFilhos(paiId).filter((f) => visibleIds.has(f.id)),

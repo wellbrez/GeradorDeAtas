@@ -140,9 +140,9 @@ function buildHeaderBlock(c: MeetingMinutes['cabecalho'], pagina: number, total:
   const cabPrincipalFixed = E.cabPrincipal + ';table-layout:fixed;'
   return (
     `<table style="${cabPrincipalFixed}" cellpadding="5" cellspacing="0">` +
-    `<tr style="${E.noBreak}"><td style="${logoCell ? logoCellStyle : E.cabCentro + ';width:20%;'}">${logoCell}</td><td width="20%" style="${E.cabCentro}"></td><td width="20%" style="${E.cabCentro}">Classificação<br/>USO RESTRITO</td><td colspan="2" width="60%" style="${E.cabEsq}">${projeto}</td></tr>` +
-    `<tr style="${E.noBreak}"><td colspan="3" style="${E.cabEsq}"><strong>${titulo}</strong></td><td style="${E.cabEsq}">Número: <strong>${esc(c.numero)} Rev. 0</strong><br/>Tipo: <strong>${esc(c.tipo)}</strong></td><td class="ata-pagina-num-cell" style="${E.cabCentro}">Página<br/><strong><span class="ata-pagina-num">${pagina} de ${total}</span></strong></td></tr>` +
-    `<tr style="${E.noBreak}"><td colspan="5" style="${E.cabSemBorda}">` +
+    `<tr style="${E.noBreak}"><td style="${logoCell ? logoCellStyle : E.cabCentro + ';width:20%;'}">${logoCell}</td><td width="20%" style="${E.cabCentro}">Classificação<br/>USO RESTRITO</td><td colspan="2" width="60%" style="${E.cabEsq}">${projeto}</td></tr>` +
+    `<tr style="${E.noBreak}"><td colspan="2" style="${E.cabEsq}"><strong>${titulo}</strong></td><td colspan="2" style="${E.cabEsq}">Número: <strong>${esc(c.numero)} Rev. 0</strong><br/>Tipo: <strong>${esc(c.tipo)}</strong><br/><span class="ata-pagina-num">Página ${pagina} de ${total}</span></td></tr>` +
+    `<tr style="${E.noBreak}"><td colspan="4" style="${E.cabSemBorda}">` +
     `<table style="${E.tabela}" cellpadding="5" cellspacing="0">` +
     `<tr style="${E.noBreak}"><td style="${E.cabTexto}width:20%;">Data</td><td style="${E.resp}width:30%;">${dataBr(c.data)}</td><td style="${E.cabTexto}width:20%;">Responsável</td><td style="${E.resp}width:30%;">${esc(c.responsavel)}</td></tr>` +
     `<tr style="${E.noBreak}"><td style="${E.cabTexto}">Projeto</td><td style="${E.resp}">${projeto}</td><td style="${E.cabTexto}width:20%;">Contrato</td><td style="${E.resp}width:30%;">${contrato}</td></tr>` +
@@ -260,7 +260,7 @@ function buildAtaHtml(ata: MeetingMinutes, options?: BuildAtaHtmlOptions): strin
   .ata-pagina { page-break-inside:avoid; }
   .ata-pagina table tr { page-break-inside:avoid; }
   .ata-pagina thead { display:table-header-group; }
-  .ata-pagina-num-cell { display:none!important; }
+  .ata-pagina-num { display:none!important; }
 }
 `
 
