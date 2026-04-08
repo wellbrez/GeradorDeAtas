@@ -126,8 +126,18 @@ function deveOcultarPeloFiltro(item: Item, dataReuniao: string): boolean {
 
 /**
  * Conjunto de IDs visíveis na lista (pesquisa + filtro de ocultar concluídos/cancelados/info).
- * Com o filtro ativo, itens-pai (organizadores com `filhos`) só entram se houver ao menos um
- * descendente visível — o status "Pendente" padrão do pai não mantém o header sozinho na lista.
+ *
+ * Com o filtro ativo:
+ * - **Folha** (sem filhos em `getFilhos`): visível se bate na pesquisa e não é Concluído/Cancelado/Info
+ *   ocultável pelo filtro.
+ * - **Pai** com status **Pendente** e subárvore: só aparece se algum descendente ficar visível (evita
+ *   cabeçalho organizacional com "Pendente" padrão sozinho).
+ * - **Pai** com **Em andamento** (ou outro status que o filtro não esconde): aparece normalmente
+ *   (`!hideByFilter`), mesmo que todos os filhos sumam no filtro — a linha do pai é trabalho em aberto.
+ * - **Pai** Concluído/Cancelado/Info: visível se não for ocultado pelo filtro **ou** se algum filho visível
+ *   (mantém contexto da hierarquia).
+ *
+ * Usa `getFilhos` (e não só `item.filhos`) para detectar pai/folha, alinhado à árvore real.
  */
 function computeVisibleItemIds(
   raizes: Item[],
@@ -151,7 +161,8 @@ function computeVisibleItemIds(
   const visitComFiltro = (item: Item): boolean => {
     const matchSearch = itemMatchesSearch(item, searchQuery)
     const hideByFilter = deveOcultarPeloFiltro(item, dataReuniao)
-    const temFilhosReais = (item.filhos?.length ?? 0) > 0
+    const filhosLista = getFilhos(item.id)
+    const temFilhosReais = filhosLista.length > 0
 
     if (!temFilhosReais) {
       const vis = matchSearch && !hideByFilter
@@ -159,8 +170,16 @@ function computeVisibleItemIds(
       return vis
     }
 
-    const algumFilhoVisivel = getFilhos(item.id).some((child) => visitComFiltro(child))
-    const vis = matchSearch && algumFilhoVisivel
+    const descendantsVisible = filhosLista.some((child) => visitComFiltro(child))
+    const st = (item.UltimoHistorico?.status ?? 'Pendente') as ItemStatus
+
+    let vis: boolean
+    if (st === 'Pendente') {
+      vis = matchSearch && descendantsVisible
+    } else {
+      vis = matchSearch && (descendantsVisible || !hideByFilter)
+    }
+
     if (vis) set.add(item.id)
     return vis
   }
