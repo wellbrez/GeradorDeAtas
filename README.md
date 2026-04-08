@@ -40,11 +40,19 @@ npm run build
 
 ## Deploy (GitHub Pages)
 
+O site é publicado **automaticamente** ao dar push na branch **`master`**, via [GitHub Actions](.github/workflows/pages.yml). Não é usada a branch `gh-pages` (evita branches extras só para o site).
+
+**Configuração única no GitHub:** em **Settings → Pages → Build and deployment**, defina **Source** como **GitHub Actions** (não “Deploy from a branch”).
+
+Para validar o build localmente antes do push:
+
 ```bash
 npm run deploy
 ```
 
-Publica o build da pasta `dist` na branch `gh-pages` do repositório.
+Equivale a `npm run build` e gera a pasta `dist`.
+
+Se ainda existir uma branch antiga `gh-pages` no remoto, você pode removê-la após ativar o deploy por Actions: `git push origin --delete gh-pages`.
 
 ## Funcionalidades
 
