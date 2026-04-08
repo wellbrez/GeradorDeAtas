@@ -44,6 +44,8 @@ O site é publicado **automaticamente** ao dar push na branch **`main`**, via [G
 
 **Configuração única no GitHub:** em **Settings → Pages → Build and deployment**, defina **Source** como **GitHub Actions** (não “Deploy from a branch”).
 
+**Ambiente `github-pages` e branch `main`:** em **Settings → Environments → `github-pages`**, em **Deployment branches**, inclua **`main`** (ou use “All branches”). Se só `master` estiver permitido, o job **deploy** falha com *Branch "main" is not allowed to deploy to github-pages* e o site fica sem os arquivos novos (página em branco ou 404 nos assets). Depois de ajustar, rode de novo o workflow em **Actions → Deploy GitHub Pages → Re-run jobs**.
+
 Para validar o build localmente antes do push:
 
 ```bash
