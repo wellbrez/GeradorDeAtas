@@ -563,7 +563,7 @@ export default function Step2Itens({
             checked={hideConcluidosCancInfo}
             onChange={(e) => setHideConcluidosCancInfo(e.target.checked)}
           />
-          Só itens em foco (Pendente, Em andamento ou editado na data da reunião); hierarquia só entre eles
+          Abertos ou alterados na data da reunião
         </label>
         <button
           type="button"
