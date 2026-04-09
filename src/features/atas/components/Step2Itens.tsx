@@ -109,85 +109,48 @@ function formatItemPaiDescription(item: Item): React.ReactNode {
   return <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(raw) }} />
 }
 
-/** Verifica se o item foi editado no dia da reunião (criadoEm do último histórico). */
+/** Verifica se o item foi editado no dia da reunião (criadoEm do último histórico, comparado à data do cabeçalho). */
 function editadoNoDiaDaReuniao(item: Item, dataReuniao: string): boolean {
   const criadoEm = item.UltimoHistorico?.criadoEm
   if (!criadoEm || !dataReuniao) return false
   const diaItem = criadoEm.split('T')[0]
-  return diaItem === dataReuniao
+  const diaReuniao = dataReuniao.trim().split('T')[0]
+  return diaItem === diaReuniao
 }
 
-/** Item deve ser ocultado quando filtro ativo: Concluído/Cancelado/Info não editados no dia. */
+/**
+ * Com o filtro ativo, itens Concluído/Cancelado/Info só permanecem se o último histórico foi criado no dia da reunião.
+ * Pendente e Em andamento nunca são ocultados por este critério.
+ */
 function deveOcultarPeloFiltro(item: Item, dataReuniao: string): boolean {
   const status = item.UltimoHistorico?.status ?? 'Pendente'
   if (!STATUS_TO_HIDE.includes(status as (typeof STATUS_TO_HIDE)[number])) return false
   return !editadoNoDiaDaReuniao(item, dataReuniao)
 }
 
+/** Item “em foco” no filtro: não está entre os que devem sumir (pendente, em andamento ou tocado no dia). */
+function itemEntraNoFocoFiltro(item: Item, dataReuniao: string): boolean {
+  return !deveOcultarPeloFiltro(item, dataReuniao)
+}
+
 /**
- * Conjunto de IDs visíveis na lista (pesquisa + filtro de ocultar concluídos/cancelados/info).
- *
- * Com o filtro ativo:
- * - **Folha** (sem filhos em `getFilhos`): visível se bate na pesquisa e não é Concluído/Cancelado/Info
- *   ocultável pelo filtro.
- * - **Pai** com status **Pendente** e subárvore: só aparece se algum descendente ficar visível (evita
- *   cabeçalho organizacional com "Pendente" padrão sozinho).
- * - **Pai** com **Em andamento** (ou outro status que o filtro não esconde): aparece normalmente
- *   (`!hideByFilter`), mesmo que todos os filhos sumam no filtro — a linha do pai é trabalho em aberto.
- * - **Pai** Concluído/Cancelado/Info: visível se não for ocultado pelo filtro **ou** se algum filho visível
- *   (mantém contexto da hierarquia).
- *
- * Usa `getFilhos` (e não só `item.filhos`) para detectar pai/folha, alinhado à árvore real.
+ * Com filtro ativo: filhos visíveis diretos de `paiId`, **pulando** intermediários que não estão em `visibleIds`
+ * (para manter ligação até folhas “em foco” sem exibir ancestrais que falharam na regra de status).
  */
-function computeVisibleItemIds(
-  raizes: Item[],
+function getFilhosVisiveisComPulo(
+  paiId: string,
   getFilhos: (paiId: string) => Item[],
-  searchQuery: string,
-  hideConcluidosCancInfo: boolean,
-  dataReuniao: string
-): Set<string> {
-  const set = new Set<string>()
-
-  if (!hideConcluidosCancInfo) {
-    const visitFlat = (item: Item) => {
-      const matchSearch = itemMatchesSearch(item, searchQuery)
-      if (matchSearch) set.add(item.id)
-      getFilhos(item.id).forEach(visitFlat)
-    }
-    raizes.forEach(visitFlat)
-    return set
-  }
-
-  const visitComFiltro = (item: Item): boolean => {
-    const matchSearch = itemMatchesSearch(item, searchQuery)
-    const hideByFilter = deveOcultarPeloFiltro(item, dataReuniao)
-    const filhosLista = getFilhos(item.id)
-    const temFilhosReais = filhosLista.length > 0
-
-    if (!temFilhosReais) {
-      const vis = matchSearch && !hideByFilter
-      if (vis) set.add(item.id)
-      return vis
-    }
-
-    const descendantsVisible = filhosLista.some((child) => visitComFiltro(child))
-    const st = (item.UltimoHistorico?.status ?? 'Pendente') as ItemStatus
-
-    let vis: boolean
-    if (st === 'Pendente') {
-      vis = matchSearch && descendantsVisible
+  visibleIds: Set<string>
+): Item[] {
+  const out: Item[] = []
+  for (const child of getFilhos(paiId)) {
+    if (visibleIds.has(child.id)) {
+      out.push(child)
     } else {
-      vis = matchSearch && (descendantsVisible || !hideByFilter)
+      out.push(...getFilhosVisiveisComPulo(child.id, getFilhos, visibleIds))
     }
-
-    if (vis) set.add(item.id)
-    return vis
   }
-
-  raizes.forEach((r) => {
-    visitComFiltro(r)
-  })
-  return set
+  return out
 }
 
 function itemMatchesSearch(item: Item, query: string): boolean {
@@ -202,6 +165,51 @@ function itemMatchesSearch(item: Item, query: string): boolean {
 const STATUS_PENDENTE_EM_ANDAMENTO: ItemStatus[] = ['Pendente', 'Em Andamento']
 /** Concluído, Cancelado e Info: data e responsável opcionais; quando vazios não exibir alerta nem traço. */
 const STATUS_NAO_EXIGE_DATA_RESP: ItemStatus[] = ['Concluído', 'Cancelado', 'Info']
+
+/**
+ * IDs visíveis com o filtro de foco: mesma regra de status para todos, exceto que **pais** com
+ * Pendente ou Em andamento **só** entram se forem ancestrais de alguma **folha** que está em foco
+ * (folha = sem filhos em `getFilhos`, pesquisa OK, e Pendente/Em andamento ou tocado no dia).
+ * Pais Concluído/Cancelado/Info editados no dia podem aparecer sem folha em foco abaixo (bloco tocado hoje).
+ */
+function buildVisibleIdsComFiltroFoco(
+  itens: Item[],
+  getFilhos: (paiId: string) => Item[],
+  searchQuery: string,
+  dataReuniao: string
+): Set<string> {
+  const idToItem = new Map(itens.map((i) => [i.id, i]))
+  const folhasEmFoco = itens.filter(
+    (i) =>
+      getFilhos(i.id).length === 0 &&
+      itemMatchesSearch(i, searchQuery) &&
+      itemEntraNoFocoFiltro(i, dataReuniao)
+  )
+  const ancestralDeFolhaEmFoco = new Set<string>()
+  for (const leaf of folhasEmFoco) {
+    let p: string | null = leaf.pai
+    while (p) {
+      ancestralDeFolhaEmFoco.add(p)
+      p = idToItem.get(p)?.pai ?? null
+    }
+  }
+  const set = new Set<string>()
+  for (const i of itens) {
+    if (!itemMatchesSearch(i, searchQuery) || !itemEntraNoFocoFiltro(i, dataReuniao)) continue
+    const temFilhos = getFilhos(i.id).length > 0
+    if (!temFilhos) {
+      set.add(i.id)
+      continue
+    }
+    const st = (i.UltimoHistorico?.status ?? 'Pendente') as ItemStatus
+    if (STATUS_PENDENTE_EM_ANDAMENTO.includes(st)) {
+      if (ancestralDeFolhaEmFoco.has(i.id)) set.add(i.id)
+    } else {
+      set.add(i.id)
+    }
+  }
+  return set
+}
 
 function hasResponsible(item: Item): boolean {
   const r = item.UltimoHistorico?.responsavel
@@ -453,16 +461,25 @@ export default function Step2Itens({
 
   const itensRaiz = itens.filter((i) => !i.pai)
 
-  const visibleIds = useMemo(
-    () =>
-      computeVisibleItemIds(itensRaiz, getFilhos, searchQuery, hideConcluidosCancInfo, dataReuniao),
-    [itensRaiz, searchQuery, hideConcluidosCancInfo, dataReuniao, getFilhos]
-  )
+  const visibleIds = useMemo(() => {
+    if (!hideConcluidosCancInfo) {
+      const set = new Set<string>()
+      const visit = (item: Item) => {
+        if (itemMatchesSearch(item, searchQuery)) set.add(item.id)
+        getFilhos(item.id).forEach(visit)
+      }
+      itensRaiz.forEach(visit)
+      return set
+    }
+    return buildVisibleIdsComFiltroFoco(itens, getFilhos, searchQuery, dataReuniao)
+  }, [itens, itensRaiz, getFilhos, searchQuery, hideConcluidosCancInfo, dataReuniao])
 
-  const getFilhosFiltered = useMemo(
-    () => (paiId: string) => getFilhos(paiId).filter((f) => visibleIds.has(f.id)),
-    [getFilhos, visibleIds]
-  )
+  const getFilhosFiltered = useMemo(() => {
+    if (!hideConcluidosCancInfo) {
+      return (paiId: string) => getFilhos(paiId).filter((f) => visibleIds.has(f.id))
+    }
+    return (paiId: string) => getFilhosVisiveisComPulo(paiId, getFilhos, visibleIds)
+  }, [getFilhos, visibleIds, hideConcluidosCancInfo])
 
   useEffect(() => {
     const parents = itens.filter((i) => (i.filhos?.length ?? 0) > 0).map((i) => i.id)
@@ -519,7 +536,14 @@ export default function Step2Itens({
     })
   }
 
-  const itensRaizVisiveis = itensRaiz.filter((i) => visibleIds.has(i.id))
+  const itensRaizVisiveis = useMemo(() => {
+    if (!hideConcluidosCancInfo) {
+      return itensRaiz.filter((i) => visibleIds.has(i.id))
+    }
+    return itens.filter(
+      (i) => visibleIds.has(i.id) && (i.pai == null || !visibleIds.has(i.pai))
+    )
+  }, [itens, itensRaiz, visibleIds, hideConcluidosCancInfo])
 
   return (
     <div className={styles.container}>
@@ -539,7 +563,7 @@ export default function Step2Itens({
             checked={hideConcluidosCancInfo}
             onChange={(e) => setHideConcluidosCancInfo(e.target.checked)}
           />
-          Ocultar Concluídos, Cancelados e Info (não editados no dia)
+          Só itens em foco (Pendente, Em andamento ou editado na data da reunião); hierarquia só entre eles
         </label>
         <button
           type="button"
@@ -565,7 +589,7 @@ export default function Step2Itens({
               key={item.id}
               item={item}
               getFilhos={getFilhosFiltered}
-              nivel={1}
+              nivel={item.nivel}
               expandedIds={expandedIds}
               toggleExpand={toggleExpand}
               editandoItemId={editandoItemId}

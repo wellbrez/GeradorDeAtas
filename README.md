@@ -77,7 +77,7 @@ Se ainda existir uma branch antiga `gh-pages` no remoto, você pode removê-la a
 
 - Itens hierárquicos com numeração automática
 - Descrição (rich text), responsável, data, status
-- Filtros: pesquisa por número/texto; ocultar Concluídos/Cancelados/Info não editados no dia
+- Filtros: pesquisa por número/texto; modo foco (só Pendente, Em andamento ou itens alterados na data da reunião, mantendo hierarquia)
 - Edição inline logo abaixo do item
 
 ### Exportação
