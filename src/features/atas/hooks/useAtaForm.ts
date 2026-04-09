@@ -242,7 +242,7 @@ export function useAtaForm(
       }
       const novosItens = [...prev, novo]
       return novosItens.map((i) =>
-        i.id === paiId ? { ...i, filhos: [...i.filhos, newId] } : i
+        i.id === paiId ? { ...i, filhos: [...(i.filhos ?? []), newId] } : i
       )
     })
     return newId
@@ -305,11 +305,13 @@ export function useAtaForm(
       }
       collectChildren(itemId)
       const newItens = prev.filter((i) => !idsToRemove.has(i.id))
-      return newItens.map((i) =>
-        i.filhos.length
-          ? { ...i, filhos: i.filhos.filter((f: string) => !idsToRemove.has(f)) }
-          : i
-      )
+      /** `filhos` pode vir undefined em dados importados/antigos; sem isso, `i.filhos.length` quebra o app. */
+      return newItens.map((i) => {
+        const filhos = i.filhos ?? []
+        const nextFilhos = filhos.filter((f: string) => !idsToRemove.has(f))
+        if (nextFilhos.length === filhos.length && i.filhos !== undefined) return i
+        return { ...i, filhos: nextFilhos }
+      })
     })
   }, [])
 

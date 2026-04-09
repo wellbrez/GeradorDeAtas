@@ -415,6 +415,31 @@ export default function Step2Itens({
     criadoEm: string
   } | null>(null)
 
+  /** Se o item em edição sumiu (ex.: exclusão), evita estado órfão que pode quebrar a árvore na próxima render. */
+  useEffect(() => {
+    if (!editandoItemId) return
+    if (itens.some((i) => i.id === editandoItemId)) return
+    setEditandoItemId(null)
+    setEditandoEPai(false)
+    setEditandoHistorico(null)
+    setDescricao('')
+    setRespNome('')
+    setRespEmail('')
+    setData('')
+    setStatus('Pendente')
+  }, [itens, editandoItemId])
+
+  useEffect(() => {
+    if (!editandoHistorico) return
+    const item = itens.find((i) => i.id === editandoHistorico.itemId)
+    if (!item) {
+      setEditandoHistorico(null)
+      return
+    }
+    const aindaExiste = (item.historico ?? []).some((h) => h.id === editandoHistorico.historicoId)
+    if (!aindaExiste) setEditandoHistorico(null)
+  }, [itens, editandoHistorico])
+
   const iniciarEdicao = (item: Item) => {
     const temFilhos = (item.filhos?.length ?? 0) > 0
     setEditandoItemId(item.id)
